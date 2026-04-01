@@ -105,7 +105,7 @@ const userRedeemUsdc = async (
 	user: HardhatEthersSigner,
 	vaultPrudentContract: VaultPrudent,
 	asset: MockUSDC,
-	glUsdPToBurn: bigint,
+	glUSDPToBurn: bigint,
 ): Promise<{
 	assets: bigint;
 	vaultBalanceBefore: bigint;
@@ -119,12 +119,12 @@ const userRedeemUsdc = async (
 	const userBalanceBefore = await asset.balanceOf(user.address);
 	const userSharesBefore = await vaultPrudentContract.balanceOf(user.address);
 	// Get assets amount
-	const assets = await vaultPrudentContract.previewRedeem(glUsdPToBurn);
+	const assets = await vaultPrudentContract.previewRedeem(glUSDPToBurn);
 
 	// Redeem USDC from the vault
 	const redeemTx = vaultPrudentContract
 		.connect(user)
-		.redeem(glUsdPToBurn, user.address, user.address);
+		.redeem(glUSDPToBurn, user.address, user.address);
 
 	return {
 		assets,
@@ -167,12 +167,14 @@ describe('DAO functions', () => {
 			let dao: HardhatEthersSigner = accounts.dao;
 
 			/* Act */
-			const setDaoTx = vaultPrudentContract.connect(dao).setDao(newDao);
-			await setDaoTx;
+			const setDAOAddressTx = vaultPrudentContract
+				.connect(dao)
+				.setDAOAddress(newDao);
+			await setDAOAddressTx;
 
 			/* Assert */
 			expect(await vaultPrudentContract.dao()).to.equal(newDao);
-			await expect(setDaoTx)
+			await expect(setDAOAddressTx)
 				.to.emit(vaultPrudentContract, 'DaoChanged')
 				.withArgs(dao.address, newDao.address);
 		});
@@ -182,12 +184,12 @@ describe('DAO functions', () => {
 			const poorUser: HardhatEthersSigner = accounts.poorUser;
 
 			/* Act */
-			const setDaoTx = vaultPrudentContract
+			const setDAOAddressTx = vaultPrudentContract
 				.connect(poorUser)
-				.setDao(poorUser.address);
+				.setDAOAddress(poorUser.address);
 
 			/* Assert */
-			await expect(setDaoTx)
+			await expect(setDAOAddressTx)
 				.to.be.revertedWithCustomError(vaultPrudentContract, 'NotDao')
 				.withArgs(poorUser.address);
 		});
@@ -197,10 +199,12 @@ describe('DAO functions', () => {
 			const owner: HardhatEthersSigner = accounts.owner;
 
 			/* Act */
-			const setDaoTx = vaultPrudentContract.setDao(owner.address);
+			const setDAOAddressTx = vaultPrudentContract.setDAOAddress(
+				owner.address,
+			);
 
 			/* Assert */
-			await expect(setDaoTx)
+			await expect(setDAOAddressTx)
 				.to.be.revertedWithCustomError(vaultPrudentContract, 'NotDao')
 				.withArgs(owner.address);
 		});
@@ -382,11 +386,11 @@ describe('Vault - Business Logic', () => {
 		it('Should allow the user to deposit USDC, receive shares, and emit event.', async () => {
 			/* Arrange & Act */
 			const {
-				shares: glUsdP,
+				shares: glUSDP,
 				depositTx,
 				vaultBalanceBefore,
 				userBalanceBefore: whaleBalanceBefore,
-				userSharesBefore: whaleGlUsdPBefore,
+				userSharesBefore: whaleGlUSDPBefore,
 			} = await userDepositUsdc(
 				accounts.whale,
 				vaultPrudentContract,
@@ -402,7 +406,7 @@ describe('Vault - Business Logic', () => {
 					accounts.whale.address,
 					accounts.whale.address,
 					usdcDepositAmount,
-					glUsdP,
+					glUSDP,
 				);
 
 			// Balances
@@ -410,7 +414,7 @@ describe('Vault - Business Logic', () => {
 				vaultBalanceAfter,
 				whaleBalanceAfter,
 				vaultTotalAssets,
-				whaleGlUsdPAfter,
+				whaleGlUSDPAfter,
 			] = await Promise.all([
 				usdcContract.balanceOf(vaultPrudentContract.target),
 				usdcContract.balanceOf(accounts.whale.address),
@@ -424,7 +428,7 @@ describe('Vault - Business Logic', () => {
 			expect(whaleBalanceBefore - whaleBalanceAfter).to.equal(
 				usdcDepositAmount,
 			);
-			expect(whaleGlUsdPAfter - whaleGlUsdPBefore).to.equal(glUsdP);
+			expect(whaleGlUSDPAfter - whaleGlUSDPBefore).to.equal(glUSDP);
 			expect(vaultTotalAssets - vaultBalanceBefore).to.equal(
 				usdcDepositAmount,
 			);
@@ -456,11 +460,11 @@ describe('Vault - Business Logic', () => {
 		// 	);
 	});
 	describe('Redeems', () => {
-		let glUsdPToBurn = ethers.parseUnits('500', 6);
+		let glUSDPToBurn = ethers.parseUnits('500', 6);
 
 		it('Should allow the user to redeem USDC, burn glUSD-P, and emit event.', async () => {
 			/* Arrange & Act */
-			const { shares: glUsdP, depositTx } = await userDepositUsdc(
+			const { shares: glUSDP, depositTx } = await userDepositUsdc(
 				accounts.whale,
 				vaultPrudentContract,
 				usdcContract,
@@ -480,13 +484,13 @@ describe('Vault - Business Logic', () => {
 				assets: usdcRedeemed,
 				vaultBalanceBefore,
 				userBalanceBefore: whaleBalanceBefore,
-				userSharesBefore: whaleGlUsdPBefore,
+				userSharesBefore: whaleGlUSDPBefore,
 				redeemTx,
 			} = await userRedeemUsdc(
 				accounts.whale,
 				vaultPrudentContract,
 				usdcContract,
-				glUsdPToBurn,
+				glUSDPToBurn,
 			);
 
 			/* Assert */
@@ -498,7 +502,7 @@ describe('Vault - Business Logic', () => {
 					accounts.whale.address,
 					accounts.whale.address,
 					usdcRedeemed,
-					glUsdPToBurn,
+					glUSDPToBurn,
 				);
 
 			// Balances
@@ -506,7 +510,7 @@ describe('Vault - Business Logic', () => {
 				vaultBalanceAfter,
 				whaleBalanceAfter,
 				vaultTotalAssets,
-				whaleGlUsdPAfter,
+				whaleGlUSDPAfter,
 			] = await Promise.all([
 				usdcContract.balanceOf(vaultPrudentContract.target),
 				usdcContract.balanceOf(accounts.whale.address),
@@ -520,7 +524,7 @@ describe('Vault - Business Logic', () => {
 			expect(whaleBalanceAfter - whaleBalanceBefore).to.equal(
 				usdcRedeemed,
 			);
-			expect(whaleGlUsdPBefore - whaleGlUsdPAfter).to.equal(glUsdPToBurn);
+			expect(whaleGlUSDPBefore - whaleGlUSDPAfter).to.equal(glUSDPToBurn);
 			expect(vaultBalanceBefore - vaultTotalAssets).to.equal(
 				usdcRedeemed,
 			);
