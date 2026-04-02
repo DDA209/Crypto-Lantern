@@ -9,4 +9,4 @@ echo.
 goto test
 :test
 echo Tests running
-call npx hardhat test test/unit/VaultPrudent.test.ts --coverage
+call npx hardhat test test/unit/VaultPrudentGlUSDP.test.ts --coverage
