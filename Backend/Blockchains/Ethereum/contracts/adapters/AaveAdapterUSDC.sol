@@ -22,13 +22,21 @@ error NotVault(address sender);
 
     address public vault;
 
-    bool public isLanternAdaptor = true;
+    bool public isLanternAdaptor = true; // TODO: Replace by ERC-165 to check if the contract is an adapter
 
     /* Modifiers */
+    /// @notice Modifier to check if the caller is the vault
+    /// @dev The caller must be the vault to call this function
     modifier onlyVault() {
         require(msg.sender == vault, NotVault(msg.sender));
         _;
     }
+
+    /// @notice Constructor for the AaveAdapterUSDC contract
+    /// @param _usdc The USDC token contract address
+    /// @param _aUSDC The aUSDC token contract address
+    /// @param _aavePool The Aave pool contract address
+    /// @param _vault The vault contract address
     constructor(address _usdc, address _aUSDC, address _aavePool, address _vault) {
         usdc = IERC20(_usdc);
         aUSDC = IERC20(_aUSDC); // 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c https://aave.com/docs/resources/addresses
@@ -38,9 +46,8 @@ error NotVault(address sender);
 
 
     /* View functions */
-    function getInvestedAssets() external view onlyVault returns (uint256) {
+    function getInvestedAssets() external view returns (uint256) {
         return aUSDC.balanceOf(address(this));
-
     }
 
     /* Strategy functions */
