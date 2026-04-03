@@ -38,7 +38,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /* State variables */
     struct Strategy {
         IAdapter adapter;
-        uint16 repatitionBIPS;
+        uint16 repatitionBIPS; // 10000 = 100.00%
     }
 
     /// @notice Array of strategies
@@ -65,6 +65,14 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /// @notice Last total assets
     /// @dev The last total assets of the vault
     uint256 public lastTotalAssets;
+
+    /// @notice Total deposit
+    /// @dev The total deposit of the vault
+    uint256 public totalDeposit;
+
+    /// @notice Share price
+    /// @dev The price of one share
+    uint256 public sharePrice;
  
     /* Modifiers */
 
@@ -89,6 +97,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /// @return bufferTotalAssets sum of the assets in the vault and the assets invested
     function getBufferTotalAssets() public view returns(uint256 bufferTotalAssets) {
         bufferTotalAssets = IERC20(asset()).balanceOf(address(this));
+
         return bufferTotalAssets;
     }
 
@@ -98,9 +107,11 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /// @inheritdoc IERC4626
     function totalAssets() public view override returns (uint256 totalAsset) {
         uint256 usdcBalance = IERC20(asset()).balanceOf(address(this));
+        
         for (uint256 i = 0; i < strategies.length; i++) {
             usdcBalance += strategies[i].adapter.getInvestedAssets();
         }
+        
         return usdcBalance;
     }
 
@@ -201,20 +212,24 @@ contract VaultPrudentGlUSDP is ERC4626 {
     function harvest() external onlyDAO {
         uint256 currentTotalAssets = totalAssets();
         uint256 profit = currentTotalAssets - lastTotalAssets;
-        uint256 fees = profit * feesBIPS / 10000;
+        uint256 fees = profit * feesBIPS / 10000; //USDC
+        
 
         if (fees > 0) {
             uint256 sharesToMint = previewDeposit(fees);
+
             _mint(daoAddress, sharesToMint);
         }
-        lastTotalAssets = currentTotalAssets;
+        lastTotalAssets = currentTotalAssets; // TODO: Check logic
 
-        rebalancing();
+        rebalancing(currentTotalAssets);
     }
 
     /// @custom:todo write all code
-    function rebalancing() public onlyDAO  {
-       // To something
+    function rebalancing(uint256 currentTotalAssets) internal  {
+
+        
+        
     }
     /* External functions */
 
@@ -234,7 +249,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
 
         glUSDP = super.deposit(assetAmount, receiver); // giving shares to the user
         uint256 amountForBuffer = assetAmount * liquidityBufferBIPS / 10000; // 10% of the assets in the vault to absorb impermanent loss
-        uint256 amountToInvest = assetAmount - amountForBuffer;
+        uint256 amountToInvest = assetAmount - amountForBuffer; // 90%
 
         if (amountToInvest > 0) { 
             for (uint256 i = 0; i < strategies.length; i++) {
@@ -250,6 +265,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
         }
 
         lastTotalAssets += amountToInvest;
+        totalDeposit += amountToInvest;
         return glUSDP;
     }
 
@@ -268,7 +284,11 @@ contract VaultPrudentGlUSDP is ERC4626 {
 
         assets = super.withdraw(assetAmount, receiver, owner);
         lastTotalAssets -= assets;
+        totalDeposit -= assets;
 
         return assets;
     }
 }
+
+
+/// uint256 sharePrice = totalDeposit / super.totalSupply(); //USDC
