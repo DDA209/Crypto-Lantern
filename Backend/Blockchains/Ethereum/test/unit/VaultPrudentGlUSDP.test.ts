@@ -30,25 +30,10 @@ const prodAddresses = {
 	usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
 	aUSDC: '0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c',
 	aaveLendingPool: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
-	//whale: '0x28C6c06298d514Db089934071355E5743bf21d60', // Binance
 	whale: '0x38AAEF3782910bdd9eA3566C839788Af6FF9B200', //2_664_559_519.701 USDC
 };
 
-/* Fixtures */
-const getAccounts = async (isProd: boolean): Promise<Accounts> => {
-	let [owner, dao, newDao, poorUser, whale] = await ethers.getSigners();
-
-	if (isProd) {
-		await ethers.getImpersonatedSigner(prodAddresses.whale);
-		whale = await ethers.getSigner(prodAddresses.whale);
-		await networkHelpers.setBalance(
-			whale.address,
-			ethers.parseEther('1.1'),
-		);
-	}
-
-	return { owner, dao, newDao, poorUser, whale };
-};
+/* Contracts */
 
 const deployUSDCContract = async (isProd: boolean): Promise<MockUSDC> => {
 	if (isProd) {
@@ -81,6 +66,9 @@ const deployVaultPrudentGlUSDPContract = async (
 	const vault = await ethers.deployContract('VaultPrudentGlUSDP', [
 		usdcContract,
 		dao.address,
+		5000, // feesBIPS
+		10000, // liquidityBufferBIPS
+		5000, // liquidityBufferBIPSDeltaBIPS
 	]);
 	return vault;
 };
@@ -95,6 +83,23 @@ const deployAdapters = async (
 		vaultAddress,
 	]);
 	return aaveAdapterUSDC;
+};
+
+/* Fixtures */
+
+const getAccounts = async (isProd: boolean): Promise<Accounts> => {
+	let [owner, dao, newDao, poorUser, whale] = await ethers.getSigners();
+
+	if (isProd) {
+		await ethers.getImpersonatedSigner(prodAddresses.whale);
+		whale = await ethers.getSigner(prodAddresses.whale);
+		await networkHelpers.setBalance(
+			whale.address,
+			ethers.parseEther('1.1'),
+		);
+	}
+
+	return { owner, dao, newDao, poorUser, whale };
 };
 
 const deployFixture = async (): Promise<{
@@ -685,6 +690,8 @@ describe('Vault - Business Logic', () => {
 				usdcContract,
 				USDC_TO_REDEEM,
 			);
+
+			await withdrawTx;
 
 			const amoutAWA = await usdcContract.balanceOf(
 				accounts.whale.address,
