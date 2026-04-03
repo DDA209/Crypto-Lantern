@@ -281,7 +281,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
             }   
         }
 
-        lastTotalAssets += amountToInvest;
+        lastTotalAssets += assetAmount;
         return glUSDP;
     }
 
