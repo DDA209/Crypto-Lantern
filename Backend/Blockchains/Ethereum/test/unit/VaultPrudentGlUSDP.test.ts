@@ -164,8 +164,8 @@ const daoDefineStrategies = async (
 	aaveAdapterUSDCContract: AaveAdapterUSDC,
 ): Promise<void> => {
 	const { dao } = accounts;
-	const currentDao = await vaultPrudentGlUSDPContract.dao();
-	if (currentDao !== dao.address) {
+	const currentDaoAddress = await vaultPrudentGlUSDPContract.daoAddress();
+	if (currentDaoAddress !== dao.address) {
 		await vaultPrudentGlUSDPContract
 			.connect(dao)
 			.setDAOAddress(dao.address);
@@ -175,6 +175,7 @@ const daoDefineStrategies = async (
 		{
 			adapter: aaveAdapterUSDCContract.target,
 			repatitionBIPS: 10000,
+			deltaBIPS: 200,
 		},
 	];
 	const defineStrategiesTx = vaultPrudentGlUSDPContract
@@ -313,7 +314,9 @@ describe('DAO functions', () => {
 			await setDAOAddressTx;
 
 			/* Assert */
-			expect(await vaultPrudentGlUSDPContract.dao()).to.equal(newDao);
+			expect(await vaultPrudentGlUSDPContract.daoAddress()).to.equal(
+				newDao,
+			);
 			await expect(setDAOAddressTx)
 				.to.emit(vaultPrudentGlUSDPContract, 'DaoChanged')
 				.withArgs(dao.address, newDao.address);
@@ -527,12 +530,12 @@ describe('Getters functions', () => {
 		const expectedDao = accounts.dao;
 
 		/* Act */
-		const dao = await vaultPrudentGlUSDPContract
+		const daoAddress = await vaultPrudentGlUSDPContract
 			.connect(accounts.poorUser)
-			.dao();
+			.daoAddress();
 
 		/* Assert */
-		expect(dao).to.equal(expectedDao);
+		expect(daoAddress).to.equal(expectedDao);
 	});
 });
 

@@ -38,7 +38,8 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /* State variables */
     struct Strategy {
         IAdapter adapter;
-        uint16 repatitionBIPS; // 10000 = 100.00%
+        uint16 repatitionBIPS; // 6000 = 60.00%
+        uint16 deltaBIPS; // 100 = 1.00%
     }
 
     /// @notice Array of strategies
@@ -125,7 +126,9 @@ contract VaultPrudentGlUSDP is ERC4626 {
         uint16 totalRepartitionBIPS = 0;
 
         for (uint256 i = 0; i < _newStrategies.length; i++) {
+            require(address(_newStrategies[i].adapter) != address(0) && address(_newStrategies[i].adapter) != address(this), AddressNotAllowed(msg.sender, address(_newStrategies[i].adapter)));
             require(_newStrategies[i].repatitionBIPS <= 10000 && _newStrategies[i].repatitionBIPS > 0, BadPercentage(bytes("Repartition"), msg.sender, _newStrategies[i].repatitionBIPS));
+            require(_newStrategies[i].deltaBIPS <= 10000 && _newStrategies[i].deltaBIPS > 0, BadPercentage(bytes("Delta"), msg.sender, _newStrategies[i].deltaBIPS));
             require(IAdapter(_newStrategies[i].adapter).isLanternAdaptor(), AddressNotAllowed(msg.sender, address(_newStrategies[i].adapter)));
 
             totalRepartitionBIPS += _newStrategies[i].repatitionBIPS;
@@ -134,7 +137,6 @@ contract VaultPrudentGlUSDP is ERC4626 {
         
         strategies = _newStrategies;
     }
-
 
     /// @notice Sets the DAO address
     /// @param _daoAddress The address of the DAO
@@ -166,12 +168,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /// @dev The liquidity buffer percentage is the percentage of the assets in the vault that is kept in the vault to absorb impermanent loss
     /// @custom:todo Check code
     function setLiquidityBufferBIPS(uint16 _liquidityBufferBIPS) external onlyDAO {
-        require(
-            _liquidityBufferBIPS < 10000 && 
-            _liquidityBufferBIPS > 0 && 
-            _liquidityBufferBIPS > liquidityBufferBIPSDeltaBIPS &&
-            _liquidityBufferBIPS < 10000 - liquidityBufferBIPSDeltaBIPS
-        , BadPercentage(bytes("Liquidity buffer"), msg.sender, _liquidityBufferBIPS));
+        require(_liquidityBufferBIPS <= 10000 && _liquidityBufferBIPS >= 0, BadPercentage(bytes("Liquidity buffer"), msg.sender, _liquidityBufferBIPS));
         
         uint16 oldLiquidityBufferBIPS = liquidityBufferBIPS;
         liquidityBufferBIPS = _liquidityBufferBIPS;
@@ -185,8 +182,8 @@ contract VaultPrudentGlUSDP is ERC4626 {
     /// @custom:todo Check code
     function setLiquidityBufferBIPSDeltaBIPS(uint16 _liquidityBufferBIPSDeltaBIPS) external onlyDAO {
         require(
-            _liquidityBufferBIPSDeltaBIPS <= liquidityBufferBIPS - 1 && 
-            _liquidityBufferBIPSDeltaBIPS <= 9999 - liquidityBufferBIPS, 
+            _liquidityBufferBIPSDeltaBIPS <= 10000 && 
+            _liquidityBufferBIPSDeltaBIPS >= 0,
             BadPercentage(
                 bytes("Liquidity buffer delta"), 
                 msg.sender, 
@@ -199,6 +196,8 @@ contract VaultPrudentGlUSDP is ERC4626 {
         
         emit LiquidityBufferBIPSChanged(oldLiquidityBufferBIPSDeltaBIPS, _liquidityBufferBIPSDeltaBIPS);
     }
+
+
 
 /// @notice Harvests the profits from the adapters and mints shares to the DAO
 /// @dev The profits are calculated as the difference between the current total assets and the last total assets
@@ -224,30 +223,73 @@ contract VaultPrudentGlUSDP is ERC4626 {
         _rebalance(currentTotalAssets);
     }
 
-
+    /// @notice Forces the rebalance of the vault
+    /// @dev The rebalance function is called to rebalance the assets in the vault
+    /// @custom:todo Check code
+    function forceRebalance() external onlyDAO {
+        _rebalance(totalAssets());
+    }
 
     /// @custom:todo write all code
     function _rebalance(uint256 currentTotalAssets) internal  {
         // Récupère buffer
-        uint256 currentBuffer = ERC20(asset()).balanceOf(address(this));
+        uint256 currentBuffer = ERC20(asset()).balanceOf(address(this)); // 300
         // buffer cible
-        uint256 targetBuffer = currentTotalAssets * liquidityBufferBIPS / 10000;
-        // Calcul buffer mini
-        uint256 minBuffer = currentTotalAssets * (liquidityBufferBIPS - liquidityBufferBIPSDeltaBIPS) / 10000;
-        uint256 maxBuffer = currentTotalAssets * (liquidityBufferBIPS + liquidityBufferBIPSDeltaBIPS) / 10000;
+        uint256 targetBuffer = currentTotalAssets * liquidityBufferBIPS / 10000; // 250
+        // buffer mini et maxi
+        uint256 deltaBuffer = currentTotalAssets *  liquidityBufferBIPSDeltaBIPS / 10000; // 25
 
-        if (currentBuffer < minBuffer) {
+        bool forceRebalanceBuffer = false;
+
+        // uint256 amountToInvest;
+        // uint256 amountToDivest;
+
+
+        if (currentBuffer < targetBuffer - deltaBuffer) {
             // Ajouter des fonds au buffer
-        } else if (currentBuffer > maxBuffer) {
+            // amountToInvest = targetBuffer - currentBuffer;
+            forceRebalanceBuffer = true;
+        } else if (currentBuffer > targetBuffer + deltaBuffer) {
             // Retirer des fonds du buffer
+            // amountToDivest = currentBuffer - targetBuffer;
+            forceRebalanceBuffer = true;
         }
-        // Vérifier balance entre les stratégies
-        // ajouter  desinvesti de aave
-        // retirer investi vers aave
 
-        
-        
+        uint256 targetInvestedAmount = currentTotalAssets - targetBuffer; // 2500 - 250 = 2250
+        uint256 currentInvestedAmount;
+        uint256 strategyLength = strategies.length;
+
+        uint256[] memory strategyToInvest = new uint256[](strategyLength);
+
+        bool reinvestInStrategies;
+
+
+        for (uint256 index = 0; index < strategyLength; index++) {
+            uint256 currentStrategyInvestedAmount = strategies[index].adapter.getInvestedAssets(); // avve: 1500, curve: 700 soit en pourcentages 66.66% et 33.33%
+            uint256 targetStrategyInvestedAmount = targetInvestedAmount * strategies[index].repatitionBIPS / 10000; // avve: 2250 * 0.6 = 1350 puis curve: 2250 * 0.4 = 900
+            uint256 deltaStrategy = targetInvestedAmount * strategies[index].deltaBIPS / 10000; // avve: 2250 * 0.01 = 22.5 puis curve 2250 * 0.01 = 22.5
+
+            currentInvestedAmount += currentStrategyInvestedAmount; // 0 + 1500 = 1500 puis 1500 + 700 = 2200
+
+            if (currentStrategyInvestedAmount > targetStrategyInvestedAmount + deltaStrategy) { // 1500 > 1350 + 22.5 = 1372.5 --> true puis 
+                // amountToDivest += currentStrategyInvestedAmount - targetStrategyInvestedAmount;
+                // divest from this strategy
+                strategies[index].adapter.divest(currentStrategyInvestedAmount - targetStrategyInvestedAmount);
+
+            } else if (currentStrategyInvestedAmount < targetStrategyInvestedAmount - deltaStrategy) { // 1500 > 1327.5 -> true
+                // amountToInvest += targetStrategyInvestedAmount - currentStrategyInvestedAmount;
+                reinvestInStrategies = true;
+                strategyToInvest[index] = targetStrategyInvestedAmount - currentStrategyInvestedAmount;
+            }
+        }
+
+        for (uint256 index = 0; index < strategyLength; index++) {
+            if (strategyToInvest[index] > 0) {
+                strategies[index].adapter.invest(strategyToInvest[index]);
+            }
+        }
     }
+
     /* External functions */
 
     /// @notice Deposits USDC into the vault and returns shares in return
@@ -281,7 +323,7 @@ contract VaultPrudentGlUSDP is ERC4626 {
             }   
         }
 
-        lastTotalAssets += amountToInvest;
+        lastTotalAssets += assetAmount;
         return glUSDP;
     }
 
