@@ -302,26 +302,25 @@ contract VaultPrudentGlUSDP is ERC4626 {
         uint256 assetAmount,
         address receiver
     ) public override returns (uint256 glUSDP) {
-        require(strategies.length > 0, NoDataFound(bytes("Adapters")));
         require(assetAmount > 0, NotAmountZero());
         require(receiver != address(0), AddressNotAllowed(msg.sender, receiver));
 
         glUSDP = super.deposit(assetAmount, receiver); // giving shares to the user
-        uint256 amountForBuffer = assetAmount * liquidityBufferBIPS / 10000; // 10% of the assets in the vault to absorb impermanent loss
-        uint256 amountToInvest = assetAmount - amountForBuffer; // 90%
+        // uint256 amountForBuffer = assetAmount * liquidityBufferBIPS / 10000; // 10% of the assets in the vault to absorb impermanent loss
+        // uint256 amountToInvest = assetAmount - amountForBuffer; // 90%
 
-        if (amountToInvest > 0) { 
-            for (uint256 i = 0; i < strategies.length; i++) {
-                require(address(strategies[i].adapter) != address(0), AddressNotAllowed(msg.sender, address(strategies[i].adapter)));
+        // if (amountToInvest > 0) { 
+        //     for (uint256 i = 0; i < strategies.length; i++) {
+        //         require(address(strategies[i].adapter) != address(0), AddressNotAllowed(msg.sender, address(strategies[i].adapter)));
                 
-                uint256 amountForStrategy = uint256(amountToInvest) * strategies[i].repatitionBIPS / 10000;
+        //         uint256 amountForStrategy = uint256(amountToInvest) * strategies[i].repatitionBIPS / 10000;
                 
-                if (amountForStrategy > 0) {
-                    IERC20(asset()).transfer(address(strategies[i].adapter), amountForStrategy);
-                    strategies[i].adapter.invest(amountForStrategy);
-                }
-            }   
-        }
+        //         if (amountForStrategy > 0) {
+        //             IERC20(asset()).transfer(address(strategies[i].adapter), amountForStrategy);
+        //             strategies[i].adapter.invest(amountForStrategy);
+        //         }
+        //     }   
+        // }
 
         lastTotalAssets += assetAmount;
         return glUSDP;
