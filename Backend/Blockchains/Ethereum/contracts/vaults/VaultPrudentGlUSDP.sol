@@ -68,7 +68,6 @@ contract VaultPrudentGlUSDP is ERC4626 {
 
     /// @notice Total deposit
     /// @dev The total deposit of the vault
-    uint256 public totalDeposit;
 
     /// @notice Share price
     /// @dev The price of one share
@@ -222,11 +221,29 @@ contract VaultPrudentGlUSDP is ERC4626 {
         }
         lastTotalAssets = currentTotalAssets; // TODO: Check logic
 
-        rebalancing(currentTotalAssets);
+        _rebalance(currentTotalAssets);
     }
 
+
+
     /// @custom:todo write all code
-    function rebalancing(uint256 currentTotalAssets) internal  {
+    function _rebalance(uint256 currentTotalAssets) internal  {
+        // Récupère buffer
+        uint256 currentBuffer = ERC20(asset()).balanceOf(address(this));
+        // buffer cible
+        uint256 targetBuffer = currentTotalAssets * liquidityBufferBIPS / 10000;
+        // Calcul buffer mini
+        uint256 minBuffer = currentTotalAssets * (liquidityBufferBIPS - liquidityBufferBIPSDeltaBIPS) / 10000;
+        uint256 maxBuffer = currentTotalAssets * (liquidityBufferBIPS + liquidityBufferBIPSDeltaBIPS) / 10000;
+
+        if (currentBuffer < minBuffer) {
+            // Ajouter des fonds au buffer
+        } else if (currentBuffer > maxBuffer) {
+            // Retirer des fonds du buffer
+        }
+        // Vérifier balance entre les stratégies
+        // ajouter  desinvesti de aave
+        // retirer investi vers aave
 
         
         
@@ -265,7 +282,6 @@ contract VaultPrudentGlUSDP is ERC4626 {
         }
 
         lastTotalAssets += amountToInvest;
-        totalDeposit += amountToInvest;
         return glUSDP;
     }
 
@@ -284,11 +300,8 @@ contract VaultPrudentGlUSDP is ERC4626 {
 
         assets = super.withdraw(assetAmount, receiver, owner);
         lastTotalAssets -= assets;
-        totalDeposit -= assets;
 
         return assets;
     }
 }
 
-
-/// uint256 sharePrice = totalDeposit / super.totalSupply(); //USDC
