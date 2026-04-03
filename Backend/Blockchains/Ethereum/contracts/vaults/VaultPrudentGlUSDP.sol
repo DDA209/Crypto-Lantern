@@ -230,28 +230,20 @@ contract VaultPrudentGlUSDP is ERC4626 {
         _rebalance(totalAssets());
     }
 
-    /// @custom:todo write all code
+    /// @notice Rebalances the assets in the vault
+    /// @param currentTotalAssets The current total assets in the vault
+    /// @dev The rebalance function is called to rebalance the assets in the vault
+    /// @custom:todo Check code
     function _rebalance(uint256 currentTotalAssets) internal  {
-        // Récupère buffer
         uint256 currentBuffer = ERC20(asset()).balanceOf(address(this)); // 300
-        // buffer cible
         uint256 targetBuffer = currentTotalAssets * liquidityBufferBIPS / 10000; // 250
-        // buffer mini et maxi
         uint256 deltaBuffer = currentTotalAssets *  liquidityBufferBIPSDeltaBIPS / 10000; // 25
 
         bool forceRebalanceBuffer = false;
 
-        // uint256 amountToInvest;
-        // uint256 amountToDivest;
-
-
         if (currentBuffer < targetBuffer - deltaBuffer) {
-            // Ajouter des fonds au buffer
-            // amountToInvest = targetBuffer - currentBuffer;
             forceRebalanceBuffer = true;
         } else if (currentBuffer > targetBuffer + deltaBuffer) {
-            // Retirer des fonds du buffer
-            // amountToDivest = currentBuffer - targetBuffer;
             forceRebalanceBuffer = true;
         }
 
@@ -272,12 +264,9 @@ contract VaultPrudentGlUSDP is ERC4626 {
             currentInvestedAmount += currentStrategyInvestedAmount; // 0 + 1500 = 1500 puis 1500 + 700 = 2200
 
             if (currentStrategyInvestedAmount > targetStrategyInvestedAmount + deltaStrategy) { // 1500 > 1350 + 22.5 = 1372.5 --> true puis 
-                // amountToDivest += currentStrategyInvestedAmount - targetStrategyInvestedAmount;
-                // divest from this strategy
                 strategies[index].adapter.divest(currentStrategyInvestedAmount - targetStrategyInvestedAmount);
 
             } else if (currentStrategyInvestedAmount < targetStrategyInvestedAmount - deltaStrategy) { // 1500 > 1327.5 -> true
-                // amountToInvest += targetStrategyInvestedAmount - currentStrategyInvestedAmount;
                 reinvestInStrategies = true;
                 strategyToInvest[index] = targetStrategyInvestedAmount - currentStrategyInvestedAmount;
             }
