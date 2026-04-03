@@ -7,6 +7,9 @@ export default defineConfig({
 		profiles: {
 			default: {
 				version: '0.8.28',
+				settings: {
+					viaIR: true,
+				},
 			},
 			production: {
 				version: '0.8.28',
@@ -15,6 +18,7 @@ export default defineConfig({
 						enabled: true,
 						runs: 200,
 					},
+					viaIR: true,
 				},
 			},
 		},
@@ -35,12 +39,10 @@ export default defineConfig({
 			accounts: [configVariable('SEPOLIA_PRIVATE_KEY')],
 		},
 		hardhatMainnetFork: {
-			//npx hardhat node https://mainnet.infura.io/v3/API_KEY --fork-block-number 22000000 --network hardhatMainnetFork
 			type: 'edr-simulated',
 			forking: {
 				enabled: true,
-				blockNumber: 22_000_000,
-				// url: 'https://mainnet.infura.io/v3/cf34148b0b3045a4a09c292aa765d7d5',
+				blockNumber: 24_000_000,
 				url: configVariable('MAINNET_RPC_URL'),
 			},
 		},
