@@ -4,7 +4,6 @@ pragma solidity 0.8.28;
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 
 /// @notice Interface for an adapter
 /// @dev The adapter is used to invest
@@ -21,7 +20,7 @@ interface IAdapter {
 /// @notice 
 /// @dev 
 /// @custom:studywork Final project to be presented for the defense
-contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
+contract VaultPrudentGlUSDP is ERC4626 {
     /* Errors A-Z sorted*/
     error AddressNotAllowed(address sender, address badAddress);
     error BadPercentage(bytes name, address sender, uint16 badPercentage);
@@ -37,13 +36,10 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
     event LiquidityBufferBIPSChanged(uint16 oldLiquidityBufferBIPS, uint16 newLiquidityBufferBIPS);
 
     /* State variables */
-    /// @notice USDC token
-    /// @dev The USDC token contract address
-    IERC20 usdc;
-
     struct Strategy {
         IAdapter adapter;
-        uint16 repatitionBIPS;
+        uint16 repatitionBIPS; // 6000 = 60.00%
+        uint16 deltaBIPS; // 100 = 1.00%
     }
 
     /// @notice Array of strategies
@@ -59,49 +55,67 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
     /// @dev It's rebalanced with harvest
     uint16 public liquidityBufferBIPS;
 
+    /// @notice Liquidity buffer delta percentage
+    /// @dev Liquidity buffer delta is the accepted divergence between the liquidity buffer and the total assets
+    uint16 public liquidityBufferBIPSDeltaBIPS;
+
     /// @notice DAO address
     /// @dev The address of the DAO that manages the vault
-    address public dao;
+    address public daoAddress;
+
+    /// @notice Last total assets
+    /// @dev The last total assets of the vault
+    uint256 public lastTotalAssets;
+
+    /// @notice Total deposit
+    /// @dev The total deposit of the vault
+
+    /// @notice Share price
+    /// @dev The price of one share
+    uint256 public sharePrice;
  
     /* Modifiers */
 
     /// @notice Modifier to check if the caller is the DAO
     /// @dev The caller must be the DAO to call this function
     modifier onlyDAO() {
-        require(msg.sender == dao, NotDao(msg.sender));
+        require(msg.sender == daoAddress, NotDao(msg.sender));
         _;
     }
 
-    constructor(IERC20 _usdc, address _dao) ERC4626(_usdc) ERC20("Glow Prudent", "glUSD-P") {
-        usdc = _usdc;
-        dao = _dao;
-        feesBIPS = 500; // 5%
-        liquidityBufferBIPS = 1000; // 10%
+    constructor(IERC20 _usdc, address _daoAddress, uint16 _feesBIPS, uint16 _liquidityBufferBIPS, uint16 _liquidityBufferBIPSDeltaBIPS) ERC4626(_usdc) ERC20("Glow Prudent", "glUSD-P") {
+        daoAddress = _daoAddress;
+        feesBIPS = _feesBIPS;
+        liquidityBufferBIPS = _liquidityBufferBIPS;
+        liquidityBufferBIPSDeltaBIPS = _liquidityBufferBIPSDeltaBIPS;
     }
 
     /* View functions */
 
     /// @notice Returns the total amount of assets in the vault as buffer
     /// @dev The total amount of assets is the sum of the assets in the vault and the assets invested
-    /// @return totalAsset sum of the assets in the vault and the assets invested
+    /// @return bufferTotalAssets sum of the assets in the vault and the assets invested
     function getBufferTotalAssets() public view returns(uint256 bufferTotalAssets) {
-        bufferTotalAssets = usdc.balanceOf(address(this));
+        bufferTotalAssets = IERC20(asset()).balanceOf(address(this));
+
         return bufferTotalAssets;
     }
-
-    /* DAO functions */
 
     /// @notice Returns the total amount of assets in the vault including invested assets and 
     /// @dev The total amount of assets is the sum of the assets in the vault and the assets invested
     /// @return totalAsset sum of the assets in the vault and the assets invested
     /// @inheritdoc IERC4626
     function totalAssets() public view override returns (uint256 totalAsset) {
-        totalAsset = super.totalAssets();
+        uint256 usdcBalance = IERC20(asset()).balanceOf(address(this));
+        
         for (uint256 i = 0; i < strategies.length; i++) {
-            totalAsset += strategies[i].adapter.getInvestedAssets();
+            usdcBalance += strategies[i].adapter.getInvestedAssets();
         }
-        return totalAsset;
+        
+        return usdcBalance;
     }
+
+    /* DAO functions */
 
     /// @notice Defines the strategies.
     /// @param _newStrategies The new strategies. Attempeted a array of strategies with struct {address adapter, uint16 repatitionBIPS} where adapter is the smart contract address of the adapter and repatitionBIPS is the percentage * 100 of the assets to invest in the adapter. The sum of all repatitionBIPS must be exactly 10000.
@@ -110,8 +124,11 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
     function defineStrategies(Strategy[] calldata _newStrategies) external onlyDAO {
         require(_newStrategies.length > 0, NoDataFound(bytes("Adapters")));
         uint16 totalRepartitionBIPS = 0;
+
         for (uint256 i = 0; i < _newStrategies.length; i++) {
+            require(address(_newStrategies[i].adapter) != address(0) && address(_newStrategies[i].adapter) != address(this), AddressNotAllowed(msg.sender, address(_newStrategies[i].adapter)));
             require(_newStrategies[i].repatitionBIPS <= 10000 && _newStrategies[i].repatitionBIPS > 0, BadPercentage(bytes("Repartition"), msg.sender, _newStrategies[i].repatitionBIPS));
+            require(_newStrategies[i].deltaBIPS <= 10000 && _newStrategies[i].deltaBIPS > 0, BadPercentage(bytes("Delta"), msg.sender, _newStrategies[i].deltaBIPS));
             require(IAdapter(_newStrategies[i].adapter).isLanternAdaptor(), AddressNotAllowed(msg.sender, address(_newStrategies[i].adapter)));
 
             totalRepartitionBIPS += _newStrategies[i].repatitionBIPS;
@@ -121,17 +138,16 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
         strategies = _newStrategies;
     }
 
-
     /// @notice Sets the DAO address
-    /// @param _dao The address of the DAO
+    /// @param _daoAddress The address of the DAO
     /// @dev The address of the DAO that manages the vault
-    function setDAOAddress(address _dao) external onlyDAO {
-        require(_dao != address(0) && _dao != dao && _dao != address(this), AddressNotAllowed(msg.sender, _dao));
+    function setDAOAddress(address _daoAddress) external onlyDAO {
+        require(_daoAddress != address(0) && _daoAddress != daoAddress && _daoAddress != address(this), AddressNotAllowed(msg.sender, _daoAddress));
         
-        address oldDao = dao;
-        dao = _dao;
+        address oldDao = daoAddress;
+        daoAddress = _daoAddress;
         
-        emit DaoChanged(oldDao, _dao);
+        emit DaoChanged(oldDao, _daoAddress);
     }
 
     /// @notice Sets the fees percentage
@@ -160,18 +176,109 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
         emit LiquidityBufferBIPSChanged(oldLiquidityBufferBIPS, _liquidityBufferBIPS);
     }
 
-    /// @custom:todo write all code
-    function harvest() external onlyDAO {
-        // 1. Claim
-        // 2. 
-        // TODO: code the function
-        rebalance();
+    /// @notice Sets the liquidity buffer delta percentage
+    /// @param _liquidityBufferBIPSDeltaBIPS The liquidity buffer delta percentage
+    /// @dev The liquidity buffer delta percentage is the percentage of the assets in the vault that is kept in the vault to absorb impermanent loss
+    /// @custom:todo Check code
+    function setLiquidityBufferBIPSDeltaBIPS(uint16 _liquidityBufferBIPSDeltaBIPS) external onlyDAO {
+        require(
+            _liquidityBufferBIPSDeltaBIPS <= 10000 && 
+            _liquidityBufferBIPSDeltaBIPS >= 0,
+            BadPercentage(
+                bytes("Liquidity buffer delta"), 
+                msg.sender, 
+                _liquidityBufferBIPSDeltaBIPS
+            )
+        );
+
+        uint16 oldLiquidityBufferBIPSDeltaBIPS = liquidityBufferBIPSDeltaBIPS;
+        liquidityBufferBIPSDeltaBIPS = _liquidityBufferBIPSDeltaBIPS;
+        
+        emit LiquidityBufferBIPSChanged(oldLiquidityBufferBIPSDeltaBIPS, _liquidityBufferBIPSDeltaBIPS);
     }
 
-    /// @custom:todo write all code
-    function rebalance() public onlyDAO  {
-        // TODO : code the function
+
+
+/// @notice Harvests the profits from the adapters and mints shares to the DAO
+/// @dev The profits are calculated as the difference between the current total assets and the last total assets
+/// @dev The fees are calculated as feesBIPS ‱ of the profits
+/// @dev The shares are calculated as the fees multiplied by 10000 divided by the last total assets
+/// @dev The shares are minted to the DAO address
+/// @dev The last total assets are updated to the current total assets
+/// @dev The rebalance function is called to rebalance the assets in the vault
+/// @custom:todo Check code
+    function harvest() external onlyDAO {
+        uint256 currentTotalAssets = totalAssets();
+        uint256 profit = currentTotalAssets - lastTotalAssets;
+        uint256 fees = profit * feesBIPS / 10000; //USDC
+        
+
+        if (fees > 0) {
+            uint256 sharesToMint = previewDeposit(fees);
+
+            _mint(daoAddress, sharesToMint);
+        }
+        lastTotalAssets = currentTotalAssets; // TODO: Check logic
+
+        _rebalance(currentTotalAssets);
     }
+
+    /// @notice Forces the rebalance of the vault
+    /// @dev The rebalance function is called to rebalance the assets in the vault
+    /// @custom:todo Check code
+    function forceRebalance() external onlyDAO {
+        _rebalance(totalAssets());
+    }
+
+    /// @notice Rebalances the assets in the vault
+    /// @param currentTotalAssets The current total assets in the vault
+    /// @dev The rebalance function is called to rebalance the assets in the vault
+    /// @custom:todo Check code
+    function _rebalance(uint256 currentTotalAssets) internal  {
+        uint256 currentBuffer = ERC20(asset()).balanceOf(address(this)); // 300
+        uint256 targetBuffer = currentTotalAssets * liquidityBufferBIPS / 10000; // 250
+        uint256 deltaBuffer = currentTotalAssets *  liquidityBufferBIPSDeltaBIPS / 10000; // 25
+
+        bool forceRebalanceBuffer = false;
+
+        if (currentBuffer < targetBuffer - deltaBuffer) {
+            forceRebalanceBuffer = true;
+        } else if (currentBuffer > targetBuffer + deltaBuffer) {
+            forceRebalanceBuffer = true;
+        }
+
+        uint256 targetInvestedAmount = currentTotalAssets - targetBuffer; // 2500 - 250 = 2250
+        uint256 currentInvestedAmount;
+        uint256 strategyLength = strategies.length;
+
+        uint256[] memory strategyToInvest = new uint256[](strategyLength);
+
+        bool reinvestInStrategies;
+
+
+        for (uint256 index = 0; index < strategyLength; index++) {
+            uint256 currentStrategyInvestedAmount = strategies[index].adapter.getInvestedAssets(); // avve: 1500, curve: 700 soit en pourcentages 66.66% et 33.33%
+            uint256 targetStrategyInvestedAmount = targetInvestedAmount * strategies[index].repatitionBIPS / 10000; // avve: 2250 * 0.6 = 1350 puis curve: 2250 * 0.4 = 900
+            uint256 deltaStrategy = targetInvestedAmount * strategies[index].deltaBIPS / 10000; // avve: 2250 * 0.01 = 22.5 puis curve 2250 * 0.01 = 22.5
+
+            currentInvestedAmount += currentStrategyInvestedAmount; // 0 + 1500 = 1500 puis 1500 + 700 = 2200
+
+            if (currentStrategyInvestedAmount > targetStrategyInvestedAmount + deltaStrategy) { // 1500 > 1350 + 22.5 = 1372.5 --> true puis 
+                strategies[index].adapter.divest(currentStrategyInvestedAmount - targetStrategyInvestedAmount);
+
+            } else if (currentStrategyInvestedAmount < targetStrategyInvestedAmount - deltaStrategy) { // 1500 > 1327.5 -> true
+                reinvestInStrategies = true;
+                strategyToInvest[index] = targetStrategyInvestedAmount - currentStrategyInvestedAmount;
+            }
+        }
+
+        for (uint256 index = 0; index < strategyLength; index++) {
+            if (strategyToInvest[index] > 0) {
+                strategies[index].adapter.invest(strategyToInvest[index]);
+            }
+        }
+    }
+
     /* External functions */
 
     /// @notice Deposits USDC into the vault and returns shares in return
@@ -184,27 +291,27 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
         uint256 assetAmount,
         address receiver
     ) public override returns (uint256 glUSDP) {
-        require(strategies.length > 0, NoDataFound(bytes("Adapters")));
         require(assetAmount > 0, NotAmountZero());
         require(receiver != address(0), AddressNotAllowed(msg.sender, receiver));
 
         glUSDP = super.deposit(assetAmount, receiver); // giving shares to the user
-        // Eg.      100     =    1_000    *   1_000    /   10_000
-        uint256 amountForBuffer = assetAmount * liquidityBufferBIPS / 10000;
-        // Eg.      900     =    1_000    -   100
-        uint256 amountToInvest = assetAmount - amountForBuffer;
+        // uint256 amountForBuffer = assetAmount * liquidityBufferBIPS / 10000; // 10% of the assets in the vault to absorb impermanent loss
+        // uint256 amountToInvest = assetAmount - amountForBuffer; // 90%
 
-        if (amountToInvest > 0) { 
-            for (uint256 i = 0; i < strategies.length; i++) {
-                // Eg.      900     =       900     *   10000   /   10000
-                uint256 amountForStrategy = uint256(amountToInvest) * strategies[i].repatitionBIPS / 10000;
-                if (amountForStrategy > 0) {
-                    usdc.transfer(address(strategies[i].adapter), amountForStrategy);
-                    strategies[i].adapter.invest(amountForStrategy);
-                }
-            }   
-        }
+        // if (amountToInvest > 0) { 
+        //     for (uint256 i = 0; i < strategies.length; i++) {
+        //         require(address(strategies[i].adapter) != address(0), AddressNotAllowed(msg.sender, address(strategies[i].adapter)));
+                
+        //         uint256 amountForStrategy = uint256(amountToInvest) * strategies[i].repatitionBIPS / 10000;
+                
+        //         if (amountForStrategy > 0) {
+        //             IERC20(asset()).transfer(address(strategies[i].adapter), amountForStrategy);
+        //             strategies[i].adapter.invest(amountForStrategy);
+        //         }
+        //     }   
+        // }
 
+        lastTotalAssets += assetAmount;
         return glUSDP;
     }
 
@@ -215,13 +322,16 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard {
     /// @return assets The amount of assets received
     /// @inheritdoc IERC4626
     /// @custom:todo write all code
-    function withdraw(uint256 assetAmount, address receiver, address owner) public override nonReentrant returns (uint256 assets) {
+    function withdraw(uint256 assetAmount, address receiver, address owner) public override returns (uint256 assets) {
         require(assetAmount > 0, NotAmountZero());
         require(receiver != address(0), AddressNotAllowed(msg.sender, receiver));
         require(owner != address(0), AddressNotAllowed(msg.sender, owner));
-        require(assetAmount <= usdc.balanceOf(address(this)), NotEnoughAssets(bytes("Withdraw"), assetAmount, usdc.balanceOf(address(this))));
-        // TODO: withdraw from liquidity buffer
+        require(assetAmount <= IERC20(asset()).balanceOf(address(this)), NotEnoughAssets(bytes("Withdraw"), assetAmount, IERC20(asset()).balanceOf(address(this))));
+
         assets = super.withdraw(assetAmount, receiver, owner);
+        lastTotalAssets -= assets;
+
         return assets;
     }
 }
+
