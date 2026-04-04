@@ -187,15 +187,13 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /// @custom:todo Check code
     function harvest() external onlyDAO {
         uint256 currentTotalAssets = totalAssets();
-        if (currentTotalAssets <= lastTotalAssets) {
-            lastTotalAssets = currentTotalAssets;
-            return;
-        }
-        uint256 profit = currentTotalAssets - lastTotalAssets;
-        uint256 fees = profit * feesBIPS / 10000; //USDC
+        uint256 profit;
+        uint256 fees;
         uint256 sharesToMint;
 
-        if (fees > 0) {
+        if (currentTotalAssets > lastTotalAssets) {
+            profit = currentTotalAssets - lastTotalAssets;
+            fees = profit * feesBIPS / 10000; //USDC
             sharesToMint = previewDeposit(fees);
             _mint(daoAddress, sharesToMint);
         }
@@ -274,7 +272,6 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         require(assetAmount > 0, NotAmountZero());
         require(receiver != address(0), AddressNotAllowed(msg.sender, receiver));
 
-        ERC20(asset()).approve(address(this), assetAmount);
         glUSDP = super.deposit(assetAmount, receiver); // giving shares to the user
 
         lastTotalAssets += assetAmount;

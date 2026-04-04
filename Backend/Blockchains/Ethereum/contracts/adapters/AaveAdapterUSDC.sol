@@ -3,6 +3,7 @@ pragma solidity 0.8.28;
 
 import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
 import {IAdapter} from "../interfaces/IAdapter.sol";
 
@@ -12,6 +13,7 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 /// @dev This contract is an adapter for Aave protocol
 /// @custom:studywork Final project to be presented for the defense
 contract AaveAdapterUSDC is IAdapter, ERC165{
+    using SafeERC20 for IERC20;
     
     /* State variables */
 
@@ -61,16 +63,20 @@ contract AaveAdapterUSDC is IAdapter, ERC165{
     /// @inheritdoc IAdapter
     function invest(uint256 usdcAmount) external onlyVault {
         require(usdcAmount > 0, "Amount must be greater than 0");
-        usdc.approve(address(aavePool), usdcAmount);
+
+        usdc.forceApprove(address(aavePool), usdcAmount);
         aavePool.supply(address(usdc), usdcAmount, address(this), 0);
+
         emit Invest(msg.sender, usdcAmount);
     }
 
     /// @inheritdoc IAdapter
     function divest(uint256 usdcAmount) external onlyVault {
         require(usdcAmount > 0, "Amount must be greater than 0");
+
         uint256 withdrawn = aavePool.withdraw(address(usdc), usdcAmount, address(this));
-        usdc.transfer(vault, withdrawn);
+        usdc.safeTransfer(vault, withdrawn);
+
         emit Divest(msg.sender, usdcAmount);
     }
 }
