@@ -1,20 +1,23 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
+import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import {IPool} from "@aave/core-v3/contracts/interfaces/IPool.sol";
+import {IAdapter} from "../interfaces/IAdapter.sol";
 
 /// @title AaveAdapterUSDC
 /// @author Didier PASCAREL (https://www.linkedin.com/in/didier-pascarel/)
 /// @notice This contract is an adapter for Aave protocol
 /// @dev This contract is an adapter for Aave protocol
 /// @custom:studywork Final project to be presented for the defense
-contract AaveAdapterUSDC {
-/* Errors */
-error NotVault(address sender);
-    /* Events */
-    event Deposit(address indexed user, uint256 assets, uint256 shares);
-    event Withdraw(address indexed user, uint256 assets, uint256 shares);
+abstract contract AaveAdapterUSDC is IAdapter, ERC165{
+    using SafeERC20 for IERC20;
+
+    
+    
+    /* State variables */
 
     IERC20 public usdc;
     IERC20 public aUSDC;
@@ -22,9 +25,8 @@ error NotVault(address sender);
 
     address public vault;
 
-    bool public isLanternAdaptor = true; // TODO: Replace by ERC-165 to check if the contract is an adapter
-
     /* Modifiers */
+
     /// @notice Modifier to check if the caller is the vault
     /// @dev The caller must be the vault to call this function
     modifier onlyVault() {
@@ -44,26 +46,38 @@ error NotVault(address sender);
         vault = _vault;
     }
 
+    /// @inheritdoc ERC165
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IAdapter) returns (bool) {
+        return interfaceId == type(IAdapter).interfaceId || super.supportsInterface(interfaceId);
+    }
 
     /* View functions */
-    function getInvestedAssets() external view returns (uint256) {
-        return aUSDC.balanceOf(address(this));
+
+    /// @inheritdoc IAdapter
+    function getInvestedAssets() external view returns (uint256 investedAssets) {
+        investedAssets = aUSDC.balanceOf(address(this));
+        return investedAssets;
     }
 
     /* Strategy functions */
-    /// @notice Invest all USDC in Aave protocol
-    /// @custom:reference IPool supply()
+
+    /// @inheritdoc IAdapter
     function invest(uint256 usdcAmount) external onlyVault {
-        usdc.approve(address(aavePool), usdcAmount);
+        require(usdcAmount > 0, "Amount must be greater than 0");
+
+        usdc.forceApprove(address(aavePool), usdcAmount);
         aavePool.supply(address(usdc), usdcAmount, address(this), 0);
+
+        emit Invest(msg.sender, usdcAmount);
     }
 
-    /// @notice Withdraws assets from the vault
-    /// @param usdcAmount The usdcAmount of assets to withdraw
-    /// @custom:reference IPool withdraw()
+    /// @inheritdoc IAdapter
     function divest(uint256 usdcAmount) external onlyVault {
-        uint256 withdrawn = aavePool.withdraw(address(usdc), usdcAmount, address(this));
-        usdc.transfer(vault, withdrawn);
-    }
+        require(usdcAmount > 0, "Amount must be greater than 0");
 
+        uint256 withdrawn = aavePool.withdraw(address(usdc), usdcAmount, address(this));
+        usdc.safeTransfer(vault, withdrawn);
+
+        emit Divest(msg.sender, usdcAmount);
+    }
 }

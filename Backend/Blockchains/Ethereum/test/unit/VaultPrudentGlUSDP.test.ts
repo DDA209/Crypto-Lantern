@@ -2,14 +2,13 @@ import { HardhatEthersSigner } from '@nomicfoundation/hardhat-ethers/types';
 import { expect } from 'chai';
 import { network } from 'hardhat';
 import {
-	AaveAdapterUSDC,
-	MockUSDC,
-	MockAaveToken,
+	MockERC20,
 	VaultPrudentGlUSDP,
+	MockAdapter,
 } from '../../types/ethers-contracts/index.js';
-import { Addressable, ContractTransactionResponse } from 'ethers';
+import { Addressable, BigNumberish, ContractTransactionResponse } from 'ethers';
 
-const { ethers, networkHelpers } = await network.connect('hardhatMainnetFork');
+const { ethers, networkHelpers } = await network.connect();
 
 const currentBlock = await ethers.provider.getBlockNumber();
 console.info(
@@ -24,65 +23,22 @@ interface Accounts {
 	newDao: HardhatEthersSigner;
 	poorUser: HardhatEthersSigner;
 	whale: HardhatEthersSigner;
+	attacker: HardhatEthersSigner;
 }
 
-const prodAddresses = {
-	usdc: '0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48',
-	aUSDC: '0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c',
-	aaveLendingPool: '0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2',
-	whale: '0x38AAEF3782910bdd9eA3566C839788Af6FF9B200', //2_664_559_519.701 USDC
+const getAccounts = async (): Promise<Accounts> => {
+	let [owner, dao, newDao, poorUser, whale, attacker] =
+		await ethers.getSigners();
+	return { owner, dao, newDao, poorUser, whale, attacker };
 };
 
-/* Contracts */
-
-const deployUSDCContract = async (isProd: boolean): Promise<MockUSDC> => {
-	if (isProd) {
-		const usdcContract = await ethers.getContractAt(
-			'MockUSDC',
-			prodAddresses.usdc,
-		);
-		return usdcContract;
-	}
-	const mockUsdc = await ethers.deployContract('MockUSDC');
-	return mockUsdc;
-};
-
-const deployAUSDCContract = async (isProd: boolean): Promise<MockAaveToken> => {
-	if (isProd) {
-		const aUSDCContract = await ethers.getContractAt(
-			'MockAaveToken',
-			prodAddresses.aUSDC,
-		);
-		return aUSDCContract;
-	}
-	const mockAaveToken = await ethers.deployContract('MockAaveToken');
-	return mockAaveToken;
-};
-
-const deployVaultPrudentGlUSDPContract = async (
-	usdcContract: string | Addressable,
-	dao: HardhatEthersSigner,
-): Promise<VaultPrudentGlUSDP> => {
-	const vault = await ethers.deployContract('VaultPrudentGlUSDP', [
-		usdcContract,
-		dao.address,
-		5000, // feesBIPS
-		10000, // liquidityBufferBIPS
-		5000, // liquidityBufferBIPSDeltaBIPS
-	]);
-	return vault;
-};
-
-const deployAdapters = async (
-	vaultAddress: string | Addressable,
-): Promise<AaveAdapterUSDC> => {
-	const aaveAdapterUSDC = await ethers.deployContract('AaveAdapterUSDC', [
-		prodAddresses.usdc,
-		prodAddresses.aUSDC,
-		prodAddresses.aaveLendingPool,
-		vaultAddress,
-	]);
-	return aaveAdapterUSDC;
+const deployContract = async (
+	ContractName: string,
+	...args: any[]
+): Promise<MockERC20 | VaultPrudentGlUSDP | MockAdapter> => {
+	const Contract = await ethers.getContractFactory(ContractName);
+	const contract = await Contract.deploy(...args);
+	return contract as MockERC20 | VaultPrudentGlUSDP | MockAdapter;
 };
 
 /* Fixtures */
@@ -103,659 +59,1049 @@ const getAccounts = async (isProd: boolean): Promise<Accounts> => {
 };
 
 const deployFixture = async (): Promise<{
-	usdcContract: MockUSDC;
 	accounts: Accounts;
-	vaultPrudentGlUSDPContract: VaultPrudentGlUSDP;
-	aaveAdapterUSDCContract?: AaveAdapterUSDC;
+	mockUSDC: MockERC20;
+	vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	mockAdapter1: MockAdapter;
+	mockAdapter2: MockAdapter;
+	depositTx: Promise<ContractTransactionResponse>;
 }> => {
-	const withAdapters = currentBlock > 0;
-	// 1. Accounts
-	const accounts = await getAccounts(withAdapters);
-	// 2. USDC & aUSDC contract deployment
-	const usdcContract = await deployUSDCContract(withAdapters);
-	const usdcContractAddress = usdcContract.target;
-	const aUSDCContract = await deployAUSDCContract(withAdapters);
-	const aUSDCContractAddress = aUSDCContract.target;
-	// 3. Vault and Adapter deployment
-	const vaultPrudentGlUSDPContract = await deployVaultPrudentGlUSDPContract(
-		usdcContractAddress,
-		accounts.dao,
-	);
-	// 4. Mint some USDC to the whale
-	if (!withAdapters) {
-		const mintAmount = ethers.parseUnits('100000', 6); // 100_000 USDC
-		await (usdcContract as MockUSDC).mint(
-			accounts.whale.address,
-			mintAmount,
-		);
-		const approveTx = await (usdcContract as MockUSDC)
-			.connect(accounts.whale)
-			.approve(vaultPrudentGlUSDPContract.target, mintAmount);
-		await approveTx.wait();
-	}
-	// 5. Deploy adapters
-	if (withAdapters) {
-		// 5.1. Deploy adapters
-		const aaveAdapterUSDCContract = await deployAdapters(
-			vaultPrudentGlUSDPContract,
-		);
-		// 5.2. Define strategies
-		await daoDefineStrategies(
-			accounts,
-			vaultPrudentGlUSDPContract,
-			aaveAdapterUSDCContract,
-		);
-		console.log('startegy', await vaultPrudentGlUSDPContract.strategies(0));
-		return {
-			usdcContract,
-			accounts,
-			vaultPrudentGlUSDPContract,
-			aaveAdapterUSDCContract,
-		};
-	}
+	// Get accounts
+	const accounts = await getAccounts();
 
-	return { usdcContract, accounts, vaultPrudentGlUSDPContract };
+	// Deploy contracts
+	const mockUSDC = (await deployContract(
+		'MockERC20',
+		'Mock USD',
+		'USDC',
+		6,
+	)) as MockERC20;
+	const vaultPrudentGlUSDP = (await deployContract(
+		'VaultPrudentGlUSDP',
+		mockUSDC.target,
+		accounts.dao.address,
+		500n,
+		1000n,
+	)) as VaultPrudentGlUSDP;
+	const mockAdapter1 = (await deployContract(
+		'MockAdapter',
+		mockUSDC.target,
+		vaultPrudentGlUSDP.target,
+	)) as MockAdapter;
+	const mockAdapter2 = (await deployContract(
+		'MockAdapter',
+		mockUSDC.target,
+		vaultPrudentGlUSDP.target,
+	)) as MockAdapter;
+
+	// Mint some USDC to the whale
+	const mintAmount = ethers.parseUnits('1000000', 6); // 1 000 000 USDC
+	const approveTx = await mockUSDC
+		.connect(accounts.whale)
+		.approve(vaultPrudentGlUSDP.target, mintAmount);
+	await approveTx.wait();
+	await mockUSDC.mint(accounts.whale.address, mintAmount);
+
+	// First deposit
+	const depositTx = deposit(accounts.whale, vaultPrudentGlUSDP, 1000n);
+	await (await depositTx).wait();
+
+	// Return accounts and contracts
+	return {
+		accounts,
+		mockUSDC,
+		vaultPrudentGlUSDP,
+		mockAdapter1,
+		mockAdapter2,
+		depositTx,
+	};
 };
 
-/* Utils */
-const daoDefineStrategies = async (
+const deposit = (
+	user: HardhatEthersSigner,
+	vaultPrudentGlUSDP: VaultPrudentGlUSDP,
+	amount: BigNumberish,
+	receiver?: Addressable,
+): Promise<ContractTransactionResponse> => {
+	const depositTx = vaultPrudentGlUSDP
+		.connect(user)
+		.deposit(amount, receiver ?? user.address);
+	return depositTx;
+};
+
+const someLogs = (
 	accounts: Accounts,
-	vaultPrudentGlUSDPContract: VaultPrudentGlUSDP,
-	aaveAdapterUSDCContract: AaveAdapterUSDC,
-): Promise<void> => {
-	const { dao } = accounts;
-	const currentDaoAddress = await vaultPrudentGlUSDPContract.daoAddress();
-	if (currentDaoAddress !== dao.address) {
-		await vaultPrudentGlUSDPContract
-			.connect(dao)
-			.setDAOAddress(dao.address);
-	}
-
-	const strategies = [
-		{
-			adapter: aaveAdapterUSDCContract.target,
-			repatitionBIPS: 10000,
-			deltaBIPS: 200,
-		},
-	];
-	const defineStrategiesTx = vaultPrudentGlUSDPContract
-		.connect(dao)
-		.defineStrategies(strategies);
-	await defineStrategiesTx;
+	vaultPrudentGlUSDP: VaultPrudentGlUSDP,
+	mockAdapter1: MockAdapter,
+	mockAdapter2: MockAdapter,
+) => {
+	console.table({
+		...accounts,
+		'Vault Address': { address: vaultPrudentGlUSDP.target },
+		'Adapter 1 Address': { address: mockAdapter1.target },
+		'Adapter 2 Address': { address: mockAdapter2.target },
+	});
 };
-
-/* Helpers */
-
-const userDepositUsdc = async (
-	user: HardhatEthersSigner,
-	vaultPrudentGlUSDPContract: VaultPrudentGlUSDP,
-	asset: MockUSDC,
-	depositAmount: bigint,
-): Promise<{
-	vaultBalanceBefore: bigint;
-	userBalanceBefore: bigint;
-	userSharesBefore: bigint;
-	approveTx: Promise<ContractTransactionResponse>;
-}> => {
-	const vaultBalanceBefore = await asset.balanceOf(
-		vaultPrudentGlUSDPContract.target,
-	); // Enregistrement des soldes avant transaction
-	const userBalanceBefore = await asset.balanceOf(user.address);
-	const userSharesBefore = await vaultPrudentGlUSDPContract.balanceOf(
-		user.address,
-	);
-
-	// Approve USDC to the vault
-	const approveTx = asset
-		.connect(user)
-		.approve(vaultPrudentGlUSDPContract.target, depositAmount);
-
-	// Deposit USDC into the vault
-
-	return {
-		vaultBalanceBefore,
-		userBalanceBefore,
-		userSharesBefore,
-		approveTx,
-	};
-};
-
-const userRedeemUsdc = async (
-	user: HardhatEthersSigner,
-	vaultPrudentGlUSDPContract: VaultPrudentGlUSDP,
-	asset: MockUSDC,
-	usdcToRedeem: bigint,
-): Promise<{
-	assets: bigint;
-	vaultBalanceBefore: bigint;
-	userBalanceBefore: bigint;
-	userSharesBefore: bigint;
-	withdrawTx: Promise<ContractTransactionResponse>;
-}> => {
-	const vaultBalanceBefore = await asset.balanceOf(
-		vaultPrudentGlUSDPContract.target,
-	); // Enregistrement des soldes avant transaction
-	const userBalanceBefore = await asset.balanceOf(user.address);
-	const userSharesBefore = await vaultPrudentGlUSDPContract.balanceOf(
-		user.address,
-	);
-	// Get assets amount
-	const assets = await vaultPrudentGlUSDPContract.previewWithdraw(
-		usdcToRedeem,
-	);
-
-	// Withdraw USDC from the vault
-	const withdrawTx = vaultPrudentGlUSDPContract
-		.connect(user)
-		.withdraw(usdcToRedeem, user.address, user.address);
-
-	return {
-		assets,
-		vaultBalanceBefore,
-		userBalanceBefore,
-		userSharesBefore,
-		withdrawTx,
-	};
-};
-
-/* tests */
-describe('Deployment', () => {
+//*
+describe('1. Contract deployments', () => {
 	let accounts: Accounts;
-	let usdcContract: MockUSDC;
-
+	let mockUSDC: MockERC20;
 	beforeEach(async () => {
-		({ accounts, usdcContract } = await networkHelpers.loadFixture(
+		({ accounts, mockUSDC } = await networkHelpers.loadFixture(
 			deployFixture,
 		));
 	});
-
-	it('Should the whate has at least 100_000 USDC.', async () => {
-		/* Arrange & Act */
-		const whaleBalance = await usdcContract.balanceOf(
-			accounts.whale.address,
-		);
-		console.log('Whale balance', whaleBalance.toString(), ' USDC');
-
-		/* Assert */
-		expect(whaleBalance).to.be.gte(100_000); // greaterThanOrEqual
+	describe('Deployment', () => {
+		it('Should deploy the contract', async () => {
+			const { vaultPrudentGlUSDP } = await deployFixture();
+			const daoAddress = await vaultPrudentGlUSDP.daoAddress();
+			const feesBIPS = await vaultPrudentGlUSDP.feesBIPS();
+			const liquidityBufferBIPS =
+				await vaultPrudentGlUSDP.liquidityBufferBIPS();
+			expect(daoAddress).to.equal(accounts.dao.address);
+			expect(feesBIPS).to.equal(500n);
+			expect(liquidityBufferBIPS).to.equal(1000n);
+		});
+		it('Should revert if DAO address is 0', async () => {
+			try {
+				await deployContract(
+					'VaultPrudentGlUSDP',
+					mockUSDC.target,
+					ethers.ZeroAddress,
+					500n,
+					1000n,
+				);
+			} catch (error: any) {
+				expect(error.message)
+					.to.include('reverted with custom error')
+					.and.to.include('AddressNotAllowed')
+					.and.to.include(
+						'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+					)
+					.and.to.include(ethers.ZeroAddress);
+			}
+		});
+		it('Should revert if feesBIPS is not between 0 and 10000', async () => {
+			try {
+				await deployContract(
+					'VaultPrudentGlUSDP',
+					mockUSDC.target,
+					accounts.dao.address,
+					50000n,
+					1000n,
+				);
+			} catch (error: any) {
+				expect(error.message)
+					.to.include('reverted with custom error')
+					.and.to.include('BadPercentage')
+					.and.to.include(
+						'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+					)
+					.and.to.include(50000n);
+			}
+		});
+		it('Should revert if liquidityBufferBIPS is not between 0 and 10000', async () => {
+			try {
+				await deployContract(
+					'VaultPrudentGlUSDP',
+					mockUSDC.target,
+					accounts.dao.address,
+					500n,
+					50000n,
+				);
+			} catch (error: any) {
+				expect(error.message)
+					.to.include('reverted with custom error')
+					.and.to.include(
+						'0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266',
+					)
+					.and.to.include('BadPercentage')
+					.and.to.include(50000n);
+			}
+		});
 	});
+	describe('Balance', () => {
+		it('Should the whate has at least 100 000 USDC.', async () => {
+			const whaleBalance = await mockUSDC.balanceOf(
+				accounts.whale.address,
+			);
 
-	it('Should the whale has anougth ETH to pay for gas fees.', async () => {
-		/* Arrange & Act */
-		const whaleBalance = await ethers.provider.getBalance(
-			accounts.whale.address,
-		);
-		console.log('Whale ETH balance', whaleBalance.toString(), ' ETH');
-		/* Assert */
-		expect(whaleBalance).to.be.gte(1); // greaterThanOrEqual
+			expect(whaleBalance).to.be.gte(100_000); // greaterThanOrEqual
+		});
+		it('Should the whale has anougth ETH to pay for gas fees.', async () => {
+			const whaleBalance = await ethers.provider.getBalance(
+				accounts.whale.address,
+			);
+			expect(whaleBalance).to.be.gte(1); // greaterThanOrEqual
+		});
 	});
-});
+}); // * /
 
-describe('DAO functions', () => {
-	let vaultPrudentGlUSDPContract: VaultPrudentGlUSDP;
+describe('2.Contract Initalisation', () => {
 	let accounts: Accounts;
-	const newLiquidityBufferBIPS: bigint = 1300n;
-	const newFeesBIPS: bigint = 1000n;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let badStrategies: any;
 
 	beforeEach(async () => {
-		({ accounts, vaultPrudentGlUSDPContract } =
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1 } =
 			await networkHelpers.loadFixture(deployFixture));
+		badStrategies = [
+			// 110% total repartition
+			[mockAdapter1.target, 6000, 100],
+			[mockAdapter1.target, 5000, 100],
+		];
 	});
-	describe('Set a new DAO address', () => {
-		it('Should allow the DAO to change the DAO address.', async () => {
-			/* Arrange */
-			const newDao = accounts.newDao;
-			let dao: HardhatEthersSigner = accounts.dao;
-
-			/* Act */
-			const setDAOAddressTx = vaultPrudentGlUSDPContract
-				.connect(dao)
-				.setDAOAddress(newDao);
-			await setDAOAddressTx;
-
-			/* Assert */
-			expect(await vaultPrudentGlUSDPContract.daoAddress()).to.equal(
-				newDao,
-			);
-			await expect(setDAOAddressTx)
-				.to.emit(vaultPrudentGlUSDPContract, 'DaoChanged')
-				.withArgs(dao.address, newDao.address);
+	describe('Initialisation', () => {
+		it('Should deploy the contract', async () => {
+			const daoAddress = await vaultPrudentGlUSDP.daoAddress();
+			expect(daoAddress).to.equal(accounts.dao.address);
 		});
+		it('Should revert if strategies total repartition less than 100%', async () => {
+			const defineStrategiesTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies([badStrategies[0]]);
 
-		it("Shouldn't allow a non-DAO user to change the DAO address.", async () => {
-			/* Arrange */
-			const poorUser: HardhatEthersSigner = accounts.poorUser;
-
-			/* Act */
-			const setDAOAddressTx = vaultPrudentGlUSDPContract
-				.connect(poorUser)
-				.setDAOAddress(poorUser.address);
-
-			/* Assert */
-			await expect(setDAOAddressTx)
-				.to.be.revertedWithCustomError(
-					vaultPrudentGlUSDPContract,
-					'NotDao',
-				)
-				.withArgs(poorUser.address);
-		});
-
-		it("Shouldn't allow owner to change the DAO address.", async () => {
-			/* Arrange */
-			const owner: HardhatEthersSigner = accounts.owner;
-
-			/* Act */
-			const setDAOAddressTx = vaultPrudentGlUSDPContract.setDAOAddress(
-				owner.address,
+			await expect(defineStrategiesTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadPercentage',
 			);
+		});
+		it('Should revert if strategies total repartition is upper than 100%', async () => {
+			const defineStrategiesTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies(badStrategies);
 
-			/* Assert */
-			await expect(setDAOAddressTx)
-				.to.be.revertedWithCustomError(
-					vaultPrudentGlUSDPContract,
-					'NotDao',
-				)
-				.withArgs(owner.address);
+			await expect(defineStrategiesTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadPercentage',
+			);
 		});
 	});
-	describe('Set liquidity buffer percentage', () => {
-		it('Should allow the DAO to change the liquidity buffer percentage.', async () => {
-			/* Arrange */
-			const dao: HardhatEthersSigner = accounts.dao;
-			const oldLiquidityBufferBIPS = await vaultPrudentGlUSDPContract
-				.connect(dao)
-				.liquidityBufferBIPS();
+}); // * /
 
-			/* Act */
-			const setLiquidityBufferBIPSTx = vaultPrudentGlUSDPContract
-				.connect(dao)
-				.setLiquidityBufferBIPS(newLiquidityBufferBIPS);
+describe('3. DAO Governance & Configuration', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let initialStrategies: any;
+	let newStrategies: any;
+	let badStrategies: any;
 
-			/* Assert */
+	beforeEach(async () => {
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1 } =
+			await networkHelpers.loadFixture(deployFixture));
+		initialStrategies = [
+			// 60% - 40%
+			[mockAdapter1.target, 6000n, 100n],
+			[mockAdapter1.target, 4000n, 100n],
+		];
+		newStrategies = [
+			// 70% - 30%
+			[mockAdapter1.target, 7000n, 100n],
+			[mockAdapter1.target, 3000n, 100n],
+		];
+		badStrategies = [
+			// 110% total repartition
+			[mockAdapter1.target, 6000n, 100n],
+			[mockAdapter1.target, 5000n, 100n],
+		];
+	});
+	describe('Access control', () => {
+		it('Should allow the DAO to change the DAO address', async () => {
+			const setDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setDAOAddress(accounts.newDao.address);
+
+			await expect(setDAOAddressTx)
+				.to.emit(vaultPrudentGlUSDP, 'NewDAOAddressSetted')
+				.withArgs(accounts.dao.address, accounts.newDao.address);
+
+			const confirmNewDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.newDao)
+				.confirmNewDAOAddress();
+
+			await expect(confirmNewDAOAddressTx)
+				.to.emit(vaultPrudentGlUSDP, 'DAOAddressChangedConfirmed')
+				.withArgs(accounts.dao.address, accounts.newDao.address);
+
+			const newDaoAddress = await vaultPrudentGlUSDP.daoAddress();
+
+			expect(newDaoAddress).to.equal(accounts.newDao.address);
+		});
+		it('Should revert if DAO address is 0', async () => {
+			const setDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setDAOAddress(ethers.ZeroAddress);
+
+			await expect(setDAOAddressTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'AddressNotAllowed',
+			);
+		});
+		it('Should revert if DAO address is contract address', async () => {
+			const setDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setDAOAddress(vaultPrudentGlUSDP.target);
+
+			await expect(setDAOAddressTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'AddressNotAllowed',
+			);
+		});
+		it('Should revert if non-DAO user tries to change the DAO address', async () => {
+			const setDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.setDAOAddress(accounts.newDao.address);
+
+			await expect(setDAOAddressTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
+			);
+		});
+		it('Should revert if owner tries to change the DAO', async () => {
+			const setDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.owner)
+				.setDAOAddress(accounts.newDao.address);
+
+			await expect(setDAOAddressTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
+			);
+		});
+		it('Sould revert if non-newDao tries ton confirm newDao address', async () => {
+			await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setDAOAddress(accounts.newDao.address);
+
+			const confirmNewDAOAddressTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.confirmNewDAOAddress();
+
+			await expect(confirmNewDAOAddressTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
+			);
+		});
+		it('Sould everyone read the dao address', async () => {
+			const daoAddress = await vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.daoAddress();
+			expect(daoAddress).to.equal(accounts.dao.address);
+		});
+		it('Sould allow everyone to read the new DAO address setted', async () => {
+			let newDaoAddress = await vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.newDaoAddress();
+			expect(newDaoAddress).to.equal(ethers.ZeroAddress);
+
+			await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setDAOAddress(accounts.newDao.address);
+			newDaoAddress = await vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.newDaoAddress();
+
+			expect(newDaoAddress).to.equal(accounts.newDao.address);
+		});
+	});
+	describe('Fees', () => {
+		it('Should allow the DAO to change the fees percentage', async () => {
+			const setFeesBIPSTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setFeesBIPS(800);
+
+			await expect(setFeesBIPSTx)
+				.to.emit(vaultPrudentGlUSDP, 'FeesBIPSChanged')
+				.withArgs(500n, 800n);
+
+			const feesBIPS = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.feesBIPS();
+			expect(feesBIPS).to.equal(800n);
+		});
+		it('Should revert if feesBIPS upper than 10000', async () => {
+			const setFeesBIPSTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setFeesBIPS(10001n);
+
+			await expect(setFeesBIPSTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadPercentage',
+			);
+		});
+		it('Should revert if feesBIPS less than 0', async () => {
+			try {
+				await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(-1n);
+			} catch (error: any) {
+				expect(error.message)
+					.to.include('feesBIPS')
+					.and.to.include('-1')
+					.and.to.include('INVALID_ARGUMENT');
+			}
+		});
+		it('Should revert if non-DAO user tries to change the fees', async () => {
+			const setFeesBIPSTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.setFeesBIPS(800n);
+
+			await expect(setFeesBIPSTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
+			);
+		});
+		it('Should allow everyone to read the fees', async () => {
+			const feesBIPS = await vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.feesBIPS();
+			expect(feesBIPS).to.equal(500n);
+		});
+	});
+	describe('Liquidity Buffer', () => {
+		it('Should allow the DAO to change the liquidity buffer', async () => {
+			const setLiquidityBufferBIPSTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setLiquidityBufferBIPS(800);
+
 			await expect(setLiquidityBufferBIPSTx)
-				.to.emit(
-					vaultPrudentGlUSDPContract,
-					'LiquidityBufferBIPSChanged',
-				)
-				.withArgs(oldLiquidityBufferBIPS, newLiquidityBufferBIPS);
+				.to.emit(vaultPrudentGlUSDP, 'LiquidityBufferBIPSChanged')
+				.withArgs(1000n, 800n);
 
-			/* Act */
-			const liquidityBufferBIPS = await vaultPrudentGlUSDPContract
-				.connect(dao)
+			const liquidityBufferBIPS = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
 				.liquidityBufferBIPS();
-
-			/* Assert */
-			expect(liquidityBufferBIPS).to.equal(newLiquidityBufferBIPS);
+			expect(liquidityBufferBIPS).to.equal(800n);
 		});
+		it('Should revert if liquidityBufferBIPS upper than 10000', async () => {
+			const setLiquidityBufferBIPSTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.setLiquidityBufferBIPS(10001n);
 
-		it("Shouldn't allow a non-DAO user to change the liquidity buffer percentage.", async () => {
-			/* Arrange */
-			const poorUser: HardhatEthersSigner = accounts.poorUser;
-
-			/* Act */
-			const liquidityBufferBIPSTx = vaultPrudentGlUSDPContract
-				.connect(poorUser)
-				.setLiquidityBufferBIPS(newLiquidityBufferBIPS);
-
-			/* Assert */
-			await expect(liquidityBufferBIPSTx)
-				.to.be.revertedWithCustomError(
-					vaultPrudentGlUSDPContract,
-					'NotDao',
-				)
-				.withArgs(poorUser.address);
+			await expect(
+				setLiquidityBufferBIPSTx,
+			).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadPercentage',
+			);
 		});
-
-		it("Shouldn't allow owner to change the liquidity buffer percentage.", async () => {
-			/* Arrange */
-			const owner: HardhatEthersSigner = accounts.owner;
-
-			/* Act */
-			const liquidityBufferBIPSTx =
-				vaultPrudentGlUSDPContract.setLiquidityBufferBIPS(
-					newLiquidityBufferBIPS,
-				);
-
-			/* Assert */
-			await expect(liquidityBufferBIPSTx)
-				.to.be.revertedWithCustomError(
-					vaultPrudentGlUSDPContract,
-					'NotDao',
-				)
-				.withArgs(owner.address);
+		it('Should revert if liquidityBufferBIPS less than 0', async () => {
+			try {
+				await vaultPrudentGlUSDP
+					.connect(accounts.dao)
+					.setLiquidityBufferBIPS(-1n);
+			} catch (error: any) {
+				expect(error.message)
+					.to.include('liquidityBufferBIPS')
+					.and.to.include('-1')
+					.and.to.include('INVALID_ARGUMENT');
+			}
 		});
-	});
-	describe('Set fees percentage', () => {
-		it('Should allow the DAO to change the fees percentage.', async () => {
-			/* Arrange */
-			const dao: HardhatEthersSigner = accounts.dao;
-			const oldFeesBIPS = await vaultPrudentGlUSDPContract
-				.connect(dao)
-				.feesBIPS();
+		it('Should revert if non-DAO user tries to change the liquidity buffer', async () => {
+			const setLiquidityBufferBIPSTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.setLiquidityBufferBIPS(800n);
 
-			/* Act */
-			const feesBIPSTx = vaultPrudentGlUSDPContract
-				.connect(dao)
-				.setFeesBIPS(newFeesBIPS);
-
-			/* Assert */
-			await expect(feesBIPSTx)
-				.to.emit(vaultPrudentGlUSDPContract, 'FeesBIPSChanged')
-				.withArgs(oldFeesBIPS, newFeesBIPS);
-
-			/* Act */
-			const feesBIPS = await vaultPrudentGlUSDPContract
-				.connect(dao)
-				.feesBIPS();
-
-			/* Assert */
-			expect(feesBIPS).to.equal(newFeesBIPS);
+			await expect(
+				setLiquidityBufferBIPSTx,
+			).to.be.revertedWithCustomError(vaultPrudentGlUSDP, 'NotADao');
 		});
-
-		it("Shouldn't allow a non-DAO user to change the fees percentage.", async () => {
-			/* Arrange */
-			const poorUser: HardhatEthersSigner = accounts.poorUser;
-
-			/* Act */
-			const feesBIPSTx = vaultPrudentGlUSDPContract
-				.connect(poorUser)
-				.setFeesBIPS(newFeesBIPS);
-
-			/* Assert */
-			await expect(feesBIPSTx)
-				.to.be.revertedWithCustomError(
-					vaultPrudentGlUSDPContract,
-					'NotDao',
-				)
-				.withArgs(poorUser.address);
-		});
-
-		it("Shouldn't allow owner to change the fees percentage.", async () => {
-			/* Arrange */
-			const owner: HardhatEthersSigner = accounts.owner;
-
-			/* Act */
-			const feesBIPSTx = vaultPrudentGlUSDPContract
-				.connect(owner)
-				.setFeesBIPS(newFeesBIPS);
-
-			/* Assert */
-			await expect(feesBIPSTx)
-				.to.be.revertedWithCustomError(
-					vaultPrudentGlUSDPContract,
-					'NotDao',
-				)
-				.withArgs(owner.address);
+		it('Should allow everyone to read the liquidity buffer', async () => {
+			const liquidityBufferBIPS = await vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.liquidityBufferBIPS();
+			expect(liquidityBufferBIPS).to.equal(1000n);
 		});
 	});
-});
+	describe('Strategies', () => {
+		it('Should allow the DAO to define the strategies', async () => {
+			const setStrategiesTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies(initialStrategies);
 
-describe('Getters functions', () => {
-	let vaultPrudentGlUSDPContract: VaultPrudentGlUSDP;
+			await expect(setStrategiesTx)
+				.to.emit(vaultPrudentGlUSDP, 'StrategiesChanged')
+				.withArgs(initialStrategies);
+
+			const strategy0 = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.strategies(0);
+			const strategy1 = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.strategies(1);
+
+			expect(strategy0).to.deep.equal(initialStrategies[0]);
+			expect(strategy1).to.deep.equal(initialStrategies[1]);
+		});
+		it('Should allow the DAO to change the strategies', async () => {
+			await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies(initialStrategies);
+			const setStrategiesTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies(newStrategies);
+
+			await expect(setStrategiesTx)
+				.to.emit(vaultPrudentGlUSDP, 'StrategiesChanged')
+				.withArgs(newStrategies);
+
+			const strategy0 = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.strategies(0);
+			const strategy1 = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.strategies(1);
+
+			expect(strategy0).to.deep.equal(newStrategies[0]);
+			expect(strategy1).to.deep.equal(newStrategies[1]);
+		});
+		it('Should revert if the sum of the strategies is not 10000', async () => {
+			const setStrategiesTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies(badStrategies);
+
+			await expect(setStrategiesTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadPercentage',
+			);
+		});
+		it('Should revert if non-DAO user tries to change the strategies', async () => {
+			const setStrategiesTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.defineStrategies(initialStrategies);
+
+			await expect(setStrategiesTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
+			);
+		});
+		it('Should allow everyone to read the strategies', async () => {
+			await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.defineStrategies(initialStrategies);
+
+			const strategy0 = await vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.strategies(0);
+
+			expect(strategy0).to.deep.equal(initialStrategies[0]);
+		});
+		it('Should allow everyone to read undefined strategies', async () => {
+			const strategy0 = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.strategies(0);
+
+			await expect(strategy0).to.be.revertedWithoutReason(ethers);
+		});
+	});
+}); // * /
+
+describe('4. Basic Vault Accounting', () => {
 	let accounts: Accounts;
-	const expectedFeesBIPS = 500n;
-	const expectedLiquidityBufferBIPS = 1000n;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
 
 	beforeEach(async () => {
-		({ vaultPrudentGlUSDPContract, accounts } =
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
 			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 10000n,
+				deltaBIPS: 100n,
+			},
+		]);
 	});
+	describe('Deposit', () => {
+		it('Should allow users to deposit assets', async () => {
+			const userSharesBalanceBefore = await vaultPrudentGlUSDP.balanceOf(
+				accounts.whale.address,
+			);
+			const vaultTotalAssetsBefore =
+				await vaultPrudentGlUSDP.totalAssets();
+			const lastTotalAssetsBefore =
+				await vaultPrudentGlUSDP.lastTotalAssets();
+			const userBalanceBefore = await mockUSDC.balanceOf(
+				accounts.whale.address,
+			);
+			const amountToDeposit = 2000n;
 
-	it('Should return fees percentage to any user.', async () => {
-		/* Arrange */
+			const depositTx = deposit(
+				accounts.whale,
+				vaultPrudentGlUSDP,
+				amountToDeposit,
+			);
 
-		/* Act */
-		const feesBIPS = await vaultPrudentGlUSDPContract
-			.connect(accounts.poorUser)
-			.feesBIPS();
+			await expect(depositTx)
+				.to.emit(vaultPrudentGlUSDP, 'Deposit')
+				.withArgs(
+					accounts.whale.address,
+					accounts.whale.address,
+					amountToDeposit,
+					amountToDeposit,
+				);
 
-		/* Assert */
-		expect(feesBIPS).to.equal(expectedFeesBIPS);
+			const userSharesBalance = await vaultPrudentGlUSDP.balanceOf(
+				accounts.whale.address,
+			);
+			const vaultTotalAssets = await vaultPrudentGlUSDP.totalAssets();
+			const lastTotalAssets = await vaultPrudentGlUSDP.lastTotalAssets();
+			const userBalance = await mockUSDC.balanceOf(
+				accounts.whale.address,
+			);
+
+			expect(userSharesBalance).to.equal(
+				userSharesBalanceBefore + amountToDeposit,
+			);
+			expect(vaultTotalAssets).to.equal(
+				vaultTotalAssetsBefore + amountToDeposit,
+			);
+			expect(lastTotalAssets).to.equal(
+				lastTotalAssetsBefore + amountToDeposit,
+			);
+			expect(userBalance).to.equal(userBalanceBefore - amountToDeposit);
+		});
+		it('Should revert if amount is zero', async () => {
+			const depositTx = deposit(accounts.whale, vaultPrudentGlUSDP, 0n);
+
+			await expect(depositTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotAmountZero',
+			);
+		});
+		it('Should revert if amount is greater than user balance', async () => {
+			const depositTx = deposit(
+				accounts.whale,
+				vaultPrudentGlUSDP,
+				1000000000000000000000000n,
+			);
+
+			await expect(depositTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'ERC20InsufficientAllowance',
+			);
+		});
+		it('Should revert if deposit receiver address is zero', async () => {
+			const depositTx = deposit(
+				accounts.whale,
+				vaultPrudentGlUSDP,
+				2000n,
+				ethers.ZeroAddress as unknown as Addressable,
+			);
+
+			await expect(depositTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'AddressNotAllowed',
+			);
+		});
 	});
+}); // */
 
-	it('Should return liquidity buffer percentage to any user.', async () => {
-		/* Arrange */
+// someLogs(accounts, vaultPrudentGlUSDP, mockAdapter1, mockAdapter2);
 
-		/* Act */
-		const liquidityBufferBIPS = await vaultPrudentGlUSDPContract
-			.connect(accounts.poorUser)
-			.liquidityBufferBIPS();
-
-		/* Assert */
-		expect(liquidityBufferBIPS).to.equal(expectedLiquidityBufferBIPS);
-	});
-
-	it('Should return DAO address to any user.', async () => {
-		/* Arrange */
-		const expectedDao = accounts.dao;
-
-		/* Act */
-		const daoAddress = await vaultPrudentGlUSDPContract
-			.connect(accounts.poorUser)
-			.daoAddress();
-
-		/* Assert */
-		expect(daoAddress).to.equal(expectedDao);
-	});
-});
-
-describe('Vault - Business Logic', () => {
-	const IS_PROD = currentBlock > 0;
+describe('5. Asset Management & Rebalancing', () => {
 	let accounts: Accounts;
-	let usdcContract: MockUSDC;
-	let vaultPrudentGlUSDPContract: VaultPrudentGlUSDP;
-	let usdcDepositAmount = ethers.parseUnits('5000', 6);
-	let aaveAdapterUSDCContract: AaveAdapterUSDC | undefined;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
 
 	beforeEach(async () => {
-		({
-			usdcContract,
-			vaultPrudentGlUSDPContract,
-			accounts,
-			aaveAdapterUSDCContract,
-		} = await networkHelpers.loadFixture(deployFixture));
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 2000n,
+				deltaBIPS: 100n,
+			},
+			{
+				adapter: mockAdapter2.target,
+				repatitionBIPS: 8000n,
+				deltaBIPS: 100n,
+			},
+		]);
 	});
-	describe('Deposits', () => {
-		it('Should allow the whale user to deposit USDC, receive shares, and emit event.', async () => {
-			/* Arrange & Act */
-			const {
-				approveTx,
-				vaultBalanceBefore,
-				userBalanceBefore: whaleBalanceBefore,
-				userSharesBefore: whaleGlUSDPBefore,
-			} = await userDepositUsdc(
-				accounts.whale,
-				vaultPrudentGlUSDPContract,
-				usdcContract,
-				usdcDepositAmount,
+	describe('Rebalance', () => {
+		it('Should allow the DAO to rebalance the vault', async () => {
+			const rebalanceTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.forceRebalance();
+
+			await expect(rebalanceTx)
+				.to.emit(vaultPrudentGlUSDP, 'Rebalance')
+				.withArgs(true, 1000n, 100n, 900n, 900n);
+
+			const vaultBufferAssets = await mockUSDC
+				.connect(accounts.dao)
+				.balanceOf(vaultPrudentGlUSDP.target);
+
+			expect(vaultBufferAssets).to.equal(100n);
+		});
+		it('Should revert if non-DAO user tries to rebalance', async () => {
+			const rebalanceTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.forceRebalance();
+
+			await expect(rebalanceTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
 			);
+		});
+		it('Should allow everyone to read the invested assets', async () => {
+			await vaultPrudentGlUSDP.connect(accounts.dao).forceRebalance();
+			const adapter1InvestedAssets = await mockAdapter1
+				.connect(accounts.attacker)
+				.getInvestedAssets();
+			const adapter2InvestedAssets = await mockAdapter2
+				.connect(accounts.attacker)
+				.getInvestedAssets();
+			const vaultBufferAssets = await mockUSDC
+				.connect(accounts.attacker)
+				.balanceOf(vaultPrudentGlUSDP.target);
 
-			await approveTx;
-
-			const depositTx = vaultPrudentGlUSDPContract
-				.connect(accounts.whale)
-				.deposit(usdcDepositAmount, accounts.whale.address);
-
-			/* Assert */
-			// event Deposit
-			await expect(depositTx)
-				.to.emit(vaultPrudentGlUSDPContract, 'Deposit') // IERC4626 event Deposit
-				.withArgs(
-					accounts.whale.address,
-					accounts.whale.address,
-					usdcDepositAmount,
-					usdcDepositAmount,
-				);
-
-			// Balances
-			const [
-				vaultBalanceAfter,
-				whaleBalanceAfter,
-				vaultTotalAssets,
-				whaleGlUSDPAfter,
-			] = await Promise.all([
-				usdcContract.balanceOf(vaultPrudentGlUSDPContract.target),
-				usdcContract.balanceOf(accounts.whale.address),
-				vaultPrudentGlUSDPContract.totalAssets(),
-				vaultPrudentGlUSDPContract.balanceOf(accounts.whale.address),
-			]);
-
-			// expect(vaultBalanceAfter - vaultBalanceBefore).to.equal(
-			// 	usdcDepositAmount,
-			// );
-			expect(whaleBalanceBefore - whaleBalanceAfter).to.equal(
-				usdcDepositAmount,
-			);
-			expect(whaleGlUSDPAfter - whaleGlUSDPBefore).to.equal(
-				usdcDepositAmount,
-			);
-			// expect(vaultTotalAssets - vaultBalanceBefore).to.equal(
-			// 	usdcDepositAmount,
-			// );
+			expect(adapter1InvestedAssets).to.equal(180n);
+			expect(adapter2InvestedAssets).to.equal(720n);
+			expect(vaultBufferAssets).to.equal(100n);
 		});
 	});
-	it("Shouldn't allow a poor user to deposit USDC.", async () => {
-		/* Arrange & Act */
-		const { approveTx } = await userDepositUsdc(
-			accounts.poorUser,
-			vaultPrudentGlUSDPContract,
-			usdcContract,
-			usdcDepositAmount,
-		);
-		await approveTx;
-		const depositTx = vaultPrudentGlUSDPContract
-			.connect(accounts.poorUser)
-			.deposit(usdcDepositAmount, accounts.poorUser.address);
-		/* Assert */
-		await expect(depositTx).to.be.revertedWith(
-			'ERC20: transfer amount exceeds balance',
-		);
+}); // */
+
+describe('6. Yield, Fees & Harvest', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
+
+	beforeEach(async () => {
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 2000n,
+				deltaBIPS: 100n,
+			},
+			{
+				adapter: mockAdapter2.target,
+				repatitionBIPS: 8000n,
+				deltaBIPS: 100n,
+			},
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
 	});
-	describe('Redeems', () => {
-		const USDC_TO_REDEEM = 100n;
-
-		it('Should allow the whale user to redeem USDC, burn glUSD-P, and emit event.', async () => {
-			/* Arrange & Act */
+	describe('Harvest', () => {
+		it('Should allow the DAO to harvest yield', async () => {
+			const harvestTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.harvest();
+			await expect(harvestTx)
+				.to.emit(vaultPrudentGlUSDP, 'Harvest')
+				.withArgs(0n, 0n, 0n, 1000n);
+		});
+		it('Should the strategies generate yield', async () => {
+			someLogs(accounts, vaultPrudentGlUSDP, mockAdapter1, mockAdapter2);
+			// TVL origin: 180 + 720 + 100 = 1000;
+			// new TVL: 850 + 650 + 100 = 1600;
+			// yield: 600 ;
+			// fees: 600 * 0.05 = 30
+			// new shares: 30 * 1000 / 1000 = 30
+			// new total assets: 1600 + 30 = 1630
+			// new share price: 1630 / 1000 = 1.63
+			// new repartition: 163 for buffer; 1467 for strategies
+			//                  1467 * 0.2 = 293.4; 1467 * 0.8 = 1173.6
+			await vaultPrudentGlUSDP.connect(accounts.dao).forceRebalance();
 			console.table({
-				'USDC to invest': usdcDepositAmount + ' USDC',
-				'USDC to redeem': USDC_TO_REDEEM + ' USDC',
+				'previous adapter 1 TVL':
+					await mockAdapter1.getInvestedAssets(),
+				'previous adapter 2 TVL':
+					await mockAdapter2.getInvestedAssets(),
+				'previous buffer TVL': await mockUSDC.balanceOf(
+					vaultPrudentGlUSDP.target,
+				),
+				'previous total TVL': await vaultPrudentGlUSDP.totalAssets(),
+				'previous fees percentage': `${
+					(await vaultPrudentGlUSDP.feesBIPS()) / 100n
+				} %`,
 			});
-			const amoutAWB = await usdcContract.balanceOf(
-				accounts.whale.address,
-			);
-			const amoutSWB = await vaultPrudentGlUSDPContract.balanceOf(
-				accounts.whale.address,
-			);
-			const amoutAVB = await usdcContract.balanceOf(
-				vaultPrudentGlUSDPContract.target,
-			);
-			const amoutAAVB = await vaultPrudentGlUSDPContract.totalAssets();
-
-			const amounAIB =
-				currentBlock > 0
-					? await aaveAdapterUSDCContract!.getInvestedAssets()
-					: 0n;
-			console.log('USDC contract address', usdcContract.target);
-			console.log(
-				'Vault contract address',
-				vaultPrudentGlUSDPContract.target,
-			);
+			await mockAdapter1.setMockAssets(850n); // + 670
+			await mockUSDC.mint(mockAdapter1.target, 670n);
+			await mockAdapter2.setMockAssets(650n); // - 70
+			await mockUSDC.burn(mockAdapter2.target, 70n);
 
 			console.table({
-				'Whale assets Before': amoutAWB + ' USDC',
-				'Whale shares Before': amoutSWB + ' glUSD-P',
-				'Vault assets Before': amoutAVB + ' USDC',
-				'Vault a-assets Before': amoutAAVB + ' aUSDC + USDC',
-				'Invested assets Before': amounAIB + ' aUSDC',
+				'current adapter 1 TVL': await mockAdapter1.getInvestedAssets(),
+				'current adapter 2 TVL': await mockAdapter2.getInvestedAssets(),
+				'current buffer TVL': await mockUSDC.balanceOf(
+					vaultPrudentGlUSDP.target,
+				),
+				'current total TVL': await vaultPrudentGlUSDP.totalAssets(),
+				'current share price': await vaultPrudentGlUSDP.convertToAssets(
+					await vaultPrudentGlUSDP.totalAssets(),
+				),
 			});
-			const { approveTx } = await userDepositUsdc(
-				accounts.whale,
-				vaultPrudentGlUSDPContract,
-				usdcContract,
-				usdcDepositAmount,
+
+			const harvestTx = vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.harvest();
+			await expect(harvestTx)
+				.to.emit(vaultPrudentGlUSDP, 'Harvest')
+				.withArgs(600n, 30n, 18n, 1600n);
+
+			console.table({
+				'final adapter 1 TVL': await mockAdapter1.getInvestedAssets(),
+				'final adapter 2 TVL': await mockAdapter2.getInvestedAssets(),
+				'final buffer TVL': await mockUSDC.balanceOf(
+					vaultPrudentGlUSDP.target,
+				),
+				'final total TVL': await vaultPrudentGlUSDP.totalAssets(),
+			});
+		});
+		it('Should revert if non-DAO user tries to harvest', async () => {
+			const harvestTx = vaultPrudentGlUSDP
+				.connect(accounts.attacker)
+				.harvest();
+
+			await expect(harvestTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotADao',
 			);
-			await approveTx;
-			const depositTx = vaultPrudentGlUSDPContract
+		});
+	});
+}); // */
+
+describe('7. Withdrawals & Force Divest', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
+
+	beforeEach(async () => {
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 2000n,
+				deltaBIPS: 100n,
+			},
+			{
+				adapter: mockAdapter2.target,
+				repatitionBIPS: 8000n,
+				deltaBIPS: 100n,
+			},
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
+		await Promise.all([
+			mockAdapter1.setMockAssets(1000n),
+			mockUSDC.mint(mockAdapter1.target, 1000n),
+			mockAdapter2.setMockAssets(4500n),
+			mockUSDC.mint(mockAdapter2.target, 4500n),
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).harvest();
+	});
+	describe('Withdrawals', () => {
+		it('Should allow the user to withdraw assets on buffer', async () => {
+			const bufferBefore = await mockUSDC.balanceOf(
+				vaultPrudentGlUSDP.target,
+			);
+			const withdrawTx = vaultPrudentGlUSDP
 				.connect(accounts.whale)
-				.deposit(usdcDepositAmount, accounts.whale.address);
-
-			await depositTx;
-
-			const {
-				assets: usdcRedeemed,
-				vaultBalanceBefore,
-				userBalanceBefore: whaleBalanceBefore,
-				userSharesBefore: whaleGlUSDPBefore,
-				withdrawTx,
-			} = await userRedeemUsdc(
-				accounts.whale,
-				vaultPrudentGlUSDPContract,
-				usdcContract,
-				USDC_TO_REDEEM,
-			);
-
-			await withdrawTx;
-
-			const amoutAWA = await usdcContract.balanceOf(
-				accounts.whale.address,
-			);
-			const amoutSWA = await vaultPrudentGlUSDPContract.balanceOf(
-				accounts.whale.address,
-			);
-			const amoutAVA = await usdcContract.balanceOf(
-				vaultPrudentGlUSDPContract.target,
-			);
-			const amoutAVA2 = await vaultPrudentGlUSDPContract.totalAssets();
-			const amounAIA =
-				currentBlock > 0
-					? await aaveAdapterUSDCContract!.getInvestedAssets()
-					: 0n;
-			console.table({
-				'Whale assets After': amoutAWA + ' USDC',
-				'Whale shares After': amoutSWA + ' glUSD-P',
-				'Vault assets After': amoutAVA + ' USDC',
-				'Vault a-assets After': amoutAVA2 + ' aUSDC + USDC',
-				'Invested assets After': amounAIA + ' aUSDC',
-			});
-			/* Assert */
-			// event Redeem
+				.withdraw(500n, accounts.whale.address, accounts.whale.address);
 			await expect(withdrawTx)
-				.to.emit(vaultPrudentGlUSDPContract, 'Withdraw') // IERC4626 event Withdraw
+				.to.emit(vaultPrudentGlUSDP, 'Withdraw')
 				.withArgs(
 					accounts.whale.address,
 					accounts.whale.address,
 					accounts.whale.address,
-					usdcRedeemed, // 1 wei is lost in the void
-					USDC_TO_REDEEM,
+					500n,
+					81n,
 				);
-
-			// Balances
-			const [
-				vaultBalanceAfter,
-				whaleBalanceAfter,
-				vaultTotalAssets,
-				whaleGlUSDPAfter,
-			] = await Promise.all([
-				usdcContract.balanceOf(vaultPrudentGlUSDPContract.target),
-				usdcContract.balanceOf(accounts.whale.address),
-				vaultPrudentGlUSDPContract.totalAssets(),
-				vaultPrudentGlUSDPContract.balanceOf(accounts.whale.address),
-			]);
-
-			expect(vaultBalanceBefore - vaultBalanceAfter).to.equal(
-				usdcRedeemed,
+			const bufferAfter = await mockUSDC.balanceOf(
+				vaultPrudentGlUSDP.target,
 			);
-			expect(whaleBalanceAfter - whaleBalanceBefore).to.equal(
-				usdcRedeemed,
-			);
-			expect(whaleGlUSDPBefore - whaleGlUSDPAfter).to.equal(
-				USDC_TO_REDEEM,
-			);
-			// expect(vaultBalanceBefore - vaultTotalAssets).to.equal(
-			// 	usdcRedeemed,
-			// );
+			console.table({ bufferBefore, bufferAfter });
+			expect(bufferAfter).to.equal(bufferBefore - 500n);
 		});
+		it('Should allow the user to force withdraw assets on buffer and strategies', async () => {
+			const bufferBefore = await mockUSDC.balanceOf(
+				// 650
+				vaultPrudentGlUSDP.target,
+			);
+			const strategy1BalanceBefore = await mockUSDC.balanceOf(
+				// 1170
+				mockAdapter1.target,
+			);
+			const strategy2BalanceBefore = await mockUSDC.balanceOf(
+				// 4680
+				mockAdapter2.target,
+			);
+			console.table({
+				bufferBefore,
+				strategy1BalanceBefore,
+				strategy2BalanceBefore,
+			});
+
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(
+					1200n,
+					accounts.whale.address,
+					accounts.whale.address,
+				);
+			await expect(withdrawTx)
+				.to.emit(vaultPrudentGlUSDP, 'Withdraw')
+				.withArgs(
+					accounts.whale.address,
+					accounts.whale.address,
+					accounts.whale.address,
+					1200n,
+					193n,
+				);
+			const strategiesDivested = 1200n - bufferBefore; // 1200 - 650 = 550
+			const strategy1Divested = (strategiesDivested * 200n) / 1000n; // 550 * 0.2 = 110
+			const strategy2Divested = (strategiesDivested * 800n) / 1000n; // 550 * 0.8 = 440
+			console.table({
+				strategiesDivested,
+				strategy1Divested,
+				strategy2Divested,
+			});
+			const strategy1BalanceAfter = await mockUSDC.balanceOf(
+				mockAdapter1.target,
+			);
+			const strategy2BalanceAfter = await mockUSDC.balanceOf(
+				mockAdapter2.target,
+			);
+
+			expect(strategy1BalanceAfter).to.equal(
+				strategy1BalanceBefore - strategy1Divested, // 1170 - 110 = 1060
+			);
+			expect(strategy2BalanceAfter).to.equal(
+				strategy2BalanceBefore - strategy2Divested, // 4680 - 440 = 4240
+			);
+		});
+		it('Should revert if amount is greater than user balance', async () => {
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(
+					8000n,
+					accounts.whale.address,
+					accounts.whale.address,
+				);
+			await expect(withdrawTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadAmount',
+			);
+		});
+		it('Should revert if amount is zero', async () => {
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(0n, accounts.whale.address, accounts.whale.address);
+			await expect(withdrawTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotAmountZero',
+			);
+		});
+		it('Should revert if withdrawal receiver address is zero', async () => {
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(500n, ethers.ZeroAddress, ethers.ZeroAddress);
+			await expect(withdrawTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'AddressNotAllowed',
+			);
+		});
+		it('Should revert if withdrawal receiver address is not allowed', async () => {});
 	});
 });
 
-//npx hardhat test test/unit/VaultPrudentGlUSDP.test.ts --coverage
+describe('8. Read Functions', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
+
+	beforeEach(async () => {
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 2000n,
+				deltaBIPS: 100n,
+			},
+			{
+				adapter: mockAdapter2.target,
+				repatitionBIPS: 8000n,
+				deltaBIPS: 100n,
+			},
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
+		await Promise.all([
+			mockAdapter1.setMockAssets(1000n),
+			mockUSDC.mint(mockAdapter1.target, 1000n),
+			mockAdapter2.setMockAssets(4500n),
+			mockUSDC.mint(mockAdapter2.target, 4500n),
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).harvest();
+	});
+	describe('Read Functions', () => {
+		it('Should everyone be able to read the vault address', async () => {
+			expect(await vaultPrudentGlUSDP.getAddress()).to.equal(
+				vaultPrudentGlUSDP.target,
+			);
+		});
+		it('Should everyone be able to read the DAO address', async () => {
+			expect(await vaultPrudentGlUSDP.daoAddress()).to.equal(
+				accounts.dao.address,
+			);
+		});
+		it('Should everyone be able to read the strategies', async () => {
+			expect(await vaultPrudentGlUSDP.strategies(0)).to.deep.equal([
+				mockAdapter1.target,
+				2000n,
+				100n,
+			]);
+			expect(await vaultPrudentGlUSDP.strategies(1)).to.deep.equal([
+				mockAdapter2.target,
+				8000n,
+				100n,
+			]);
+		});
+		it('Should everyone be able to read the fees', async () => {
+			expect(await vaultPrudentGlUSDP.feesBIPS()).to.equal(500n);
+		});
+		it('Should everyone be able to read the total assets', async () => {
+			expect(await vaultPrudentGlUSDP.totalAssets()).to.equal(6500n);
+		});
+		it('Should everyone be able to read the total shares', async () => {
+			expect(await vaultPrudentGlUSDP.totalSupply()).to.equal(1042n);
+		});
+		it('Should everyone be able to read the buffer total assets', async () => {
+			expect(await vaultPrudentGlUSDP.getBufferTotalAssets()).to.equal(
+				650n,
+			);
+		});
+		it('Should everyone be able to read the DAO total shares', async () => {
+			expect(
+				await vaultPrudentGlUSDP.balanceOf(accounts.dao.address),
+			).to.equal(42n);
+		});
+		it('Should everyone be able to read user total shares', async () => {
+			expect(
+				await vaultPrudentGlUSDP.balanceOf(accounts.whale.address),
+			).to.equal(1000n);
+		});
+	});
+});
