@@ -20,6 +20,15 @@ contract MockERC20 is ERC20 {
     }
 
     /**
+     * @dev Burns tokens from the specified address.
+     * @param from The address to burn the tokens from.
+     * @param amount The amount of tokens to burn.
+     */
+    function burn(address from, uint256 amount) public {
+        _burn(from, amount);
+    }
+
+    /**
      * @dev Returns the number of decimals of the token.
      * @return The number of decimals of the token.
      */

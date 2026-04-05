@@ -45,8 +45,4 @@ interface IAdapter {
     /// @param asset The amount of assets to divest
     function divest(uint256 asset) external;
     
-    /// @notice Returns true if the adapter is a Lantern adaptor
-    /// @dev The adapter is a Lantern adaptor if it is a valid adaptor
-    /// @return true if the adapter is a Lantern adaptor, false otherwise
-    function isLanternAdaptor() external view returns (bool);
 }

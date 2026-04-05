@@ -14,6 +14,8 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 /// @custom:studywork Final project to be presented for the defense
 abstract contract AaveAdapterUSDC is IAdapter, ERC165{
     using SafeERC20 for IERC20;
+
+    
     
     /* State variables */
 
@@ -44,6 +46,7 @@ abstract contract AaveAdapterUSDC is IAdapter, ERC165{
         vault = _vault;
     }
 
+    /// @inheritdoc ERC165
     function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IAdapter) returns (bool) {
         return interfaceId == type(IAdapter).interfaceId || super.supportsInterface(interfaceId);
     }
