@@ -41,23 +41,6 @@ const deployContract = async (
 	return contract as MockERC20 | VaultPrudentGlUSDP | MockAdapter;
 };
 
-/* Fixtures */
-
-const getAccounts = async (isProd: boolean): Promise<Accounts> => {
-	let [owner, dao, newDao, poorUser, whale] = await ethers.getSigners();
-
-	if (isProd) {
-		await ethers.getImpersonatedSigner(prodAddresses.whale);
-		whale = await ethers.getSigner(prodAddresses.whale);
-		await networkHelpers.setBalance(
-			whale.address,
-			ethers.parseEther('1.1'),
-		);
-	}
-
-	return { owner, dao, newDao, poorUser, whale };
-};
-
 const deployFixture = async (): Promise<{
 	accounts: Accounts;
 	mockUSDC: MockERC20;
