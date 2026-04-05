@@ -797,6 +797,7 @@ describe('6. Yield, Fees & Harvest', () => {
 			// fees: 600 * 0.05 = 30
 			// new shares: 30 * 1000 / 1000 = 30
 			// new total assets: 1600 + 30 = 1630
+			// new share price: 1630 / 1000 = 1.63
 			// new repartition: 163 for buffer; 1467 for strategies
 			//                  1467 * 0.2 = 293.4; 1467 * 0.8 = 1173.6
 			await vaultPrudentGlUSDP.connect(accounts.dao).forceRebalance();
@@ -816,9 +817,7 @@ describe('6. Yield, Fees & Harvest', () => {
 			await mockAdapter1.setMockAssets(850n); // + 670
 			await mockUSDC.mint(mockAdapter1.target, 670n);
 			await mockAdapter2.setMockAssets(650n); // - 70
-			// await mockAdapter2.transfer(accounts.dao.address, 70n);
-			// Add usdc in adapters How to do that ???
-			// ...
+			await mockUSDC.burn(mockAdapter2.target, 70n);
 
 			console.table({
 				'current adapter 1 TVL': await mockAdapter1.getInvestedAssets(),
@@ -859,14 +858,233 @@ describe('6. Yield, Fees & Harvest', () => {
 			);
 		});
 	});
+}); // */
+
+describe('7. Withdrawals & Force Divest', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
+
+	beforeEach(async () => {
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 2000n,
+				deltaBIPS: 100n,
+			},
+			{
+				adapter: mockAdapter2.target,
+				repatitionBIPS: 8000n,
+				deltaBIPS: 100n,
+			},
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
+		await Promise.all([
+			mockAdapter1.setMockAssets(1000n),
+			mockUSDC.mint(mockAdapter1.target, 1000n),
+			mockAdapter2.setMockAssets(4500n),
+			mockUSDC.mint(mockAdapter2.target, 4500n),
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).harvest();
+	});
+	describe('Withdrawals', () => {
+		it('Should allow the user to withdraw assets on buffer', async () => {
+			const bufferBefore = await mockUSDC.balanceOf(
+				vaultPrudentGlUSDP.target,
+			);
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(500n, accounts.whale.address, accounts.whale.address);
+			await expect(withdrawTx)
+				.to.emit(vaultPrudentGlUSDP, 'Withdraw')
+				.withArgs(
+					accounts.whale.address,
+					accounts.whale.address,
+					accounts.whale.address,
+					500n,
+					81n,
+				);
+			const bufferAfter = await mockUSDC.balanceOf(
+				vaultPrudentGlUSDP.target,
+			);
+			console.table({ bufferBefore, bufferAfter });
+			expect(bufferAfter).to.equal(bufferBefore - 500n);
+		});
+		it('Should allow the user to force withdraw assets on buffer and strategies', async () => {
+			const bufferBefore = await mockUSDC.balanceOf(
+				// 650
+				vaultPrudentGlUSDP.target,
+			);
+			const strategy1BalanceBefore = await mockUSDC.balanceOf(
+				// 1170
+				mockAdapter1.target,
+			);
+			const strategy2BalanceBefore = await mockUSDC.balanceOf(
+				// 4680
+				mockAdapter2.target,
+			);
+			console.table({
+				bufferBefore,
+				strategy1BalanceBefore,
+				strategy2BalanceBefore,
+			});
+
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(
+					1200n,
+					accounts.whale.address,
+					accounts.whale.address,
+				);
+			await expect(withdrawTx)
+				.to.emit(vaultPrudentGlUSDP, 'Withdraw')
+				.withArgs(
+					accounts.whale.address,
+					accounts.whale.address,
+					accounts.whale.address,
+					1200n,
+					193n,
+				);
+			const strategiesDivested = 1200n - bufferBefore; // 1200 - 650 = 550
+			const strategy1Divested = (strategiesDivested * 200n) / 1000n; // 550 * 0.2 = 110
+			const strategy2Divested = (strategiesDivested * 800n) / 1000n; // 550 * 0.8 = 440
+			console.table({
+				strategiesDivested,
+				strategy1Divested,
+				strategy2Divested,
+			});
+			const strategy1BalanceAfter = await mockUSDC.balanceOf(
+				mockAdapter1.target,
+			);
+			const strategy2BalanceAfter = await mockUSDC.balanceOf(
+				mockAdapter2.target,
+			);
+
+			expect(strategy1BalanceAfter).to.equal(
+				strategy1BalanceBefore - strategy1Divested, // 1170 - 110 = 1060
+			);
+			expect(strategy2BalanceAfter).to.equal(
+				strategy2BalanceBefore - strategy2Divested, // 4680 - 440 = 4240
+			);
+		});
+		it('Should revert if amount is greater than user balance', async () => {
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(
+					8000n,
+					accounts.whale.address,
+					accounts.whale.address,
+				);
+			await expect(withdrawTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'BadAmount',
+			);
+		});
+		it('Should revert if amount is zero', async () => {
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(0n, accounts.whale.address, accounts.whale.address);
+			await expect(withdrawTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'NotAmountZero',
+			);
+		});
+		it('Should revert if withdrawal receiver address is zero', async () => {
+			const withdrawTx = vaultPrudentGlUSDP
+				.connect(accounts.whale)
+				.withdraw(500n, ethers.ZeroAddress, ethers.ZeroAddress);
+			await expect(withdrawTx).to.be.revertedWithCustomError(
+				vaultPrudentGlUSDP,
+				'AddressNotAllowed',
+			);
+		});
+		it('Should revert if withdrawal receiver address is not allowed', async () => {});
+	});
 });
-// describe('7. Withdrawals & Force Divest', () => {
-// 	beforeEach(async () => {});
-// 	describe('', () => {
-// 		it('', async () => {});
-// 		it('', async () => {});
-// 		it('', async () => {});
-// 		it('', async () => {});
-// 		it('', async () => {});
-// 	});
-// });
+
+describe('8. Read Functions', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockAdapter1: MockAdapter;
+	let mockAdapter2: MockAdapter;
+	let mockUSDC: MockERC20;
+
+	beforeEach(async () => {
+		accounts = await networkHelpers.loadFixture(getAccounts);
+		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
+			{
+				adapter: mockAdapter1.target,
+				repatitionBIPS: 2000n,
+				deltaBIPS: 100n,
+			},
+			{
+				adapter: mockAdapter2.target,
+				repatitionBIPS: 8000n,
+				deltaBIPS: 100n,
+			},
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
+		await Promise.all([
+			mockAdapter1.setMockAssets(1000n),
+			mockUSDC.mint(mockAdapter1.target, 1000n),
+			mockAdapter2.setMockAssets(4500n),
+			mockUSDC.mint(mockAdapter2.target, 4500n),
+		]);
+		await vaultPrudentGlUSDP.connect(accounts.dao).harvest();
+	});
+	describe('Read Functions', () => {
+		it('Should everyone be able to read the vault address', async () => {
+			expect(await vaultPrudentGlUSDP.getAddress()).to.equal(
+				vaultPrudentGlUSDP.target,
+			);
+		});
+		it('Should everyone be able to read the DAO address', async () => {
+			expect(await vaultPrudentGlUSDP.daoAddress()).to.equal(
+				accounts.dao.address,
+			);
+		});
+		it('Should everyone be able to read the strategies', async () => {
+			expect(await vaultPrudentGlUSDP.strategies(0)).to.deep.equal([
+				mockAdapter1.target,
+				2000n,
+				100n,
+			]);
+			expect(await vaultPrudentGlUSDP.strategies(1)).to.deep.equal([
+				mockAdapter2.target,
+				8000n,
+				100n,
+			]);
+		});
+		it('Should everyone be able to read the fees', async () => {
+			expect(await vaultPrudentGlUSDP.feesBIPS()).to.equal(500n);
+		});
+		it('Should everyone be able to read the total assets', async () => {
+			expect(await vaultPrudentGlUSDP.totalAssets()).to.equal(6500n);
+		});
+		it('Should everyone be able to read the total shares', async () => {
+			expect(await vaultPrudentGlUSDP.totalSupply()).to.equal(1042n);
+		});
+		it('Should everyone be able to read the buffer total assets', async () => {
+			expect(await vaultPrudentGlUSDP.getBufferTotalAssets()).to.equal(
+				650n,
+			);
+		});
+		it('Should everyone be able to read the DAO total shares', async () => {
+			expect(
+				await vaultPrudentGlUSDP.balanceOf(accounts.dao.address),
+			).to.equal(42n);
+		});
+		it('Should everyone be able to read user total shares', async () => {
+			expect(
+				await vaultPrudentGlUSDP.balanceOf(accounts.whale.address),
+			).to.equal(1000n);
+		});
+	});
+});
