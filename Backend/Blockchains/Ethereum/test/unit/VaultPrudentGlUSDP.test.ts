@@ -7,6 +7,7 @@ import {
 	MockAdapter,
 } from '../../types/ethers-contracts/index.js';
 import { Addressable, BigNumberish, ContractTransactionResponse } from 'ethers';
+import 'hardhat-gas-reporter';
 
 const { ethers, networkHelpers } = await network.connect();
 
@@ -32,15 +33,6 @@ const getAccounts = async (): Promise<Accounts> => {
 	return { owner, dao, newDao, poorUser, whale, attacker };
 };
 
-const deployContract = async (
-	ContractName: string,
-	...args: any[]
-): Promise<MockERC20 | VaultPrudentGlUSDP | MockAdapter> => {
-	const Contract = await ethers.getContractFactory(ContractName);
-	const contract = await Contract.deploy(...args);
-	return contract as MockERC20 | VaultPrudentGlUSDP | MockAdapter;
-};
-
 const deployFixture = async (): Promise<{
 	accounts: Accounts;
 	mockUSDC: MockERC20;
@@ -53,29 +45,23 @@ const deployFixture = async (): Promise<{
 	const accounts = await getAccounts();
 
 	// Deploy contracts
-	const mockUSDC = (await deployContract(
-		'MockERC20',
+	const mockUSDC = (await ethers.deployContract('MockERC20', [
 		'Mock USD',
 		'USDC',
 		6,
-	)) as MockERC20;
-	const vaultPrudentGlUSDP = (await deployContract(
+	])) as MockERC20;
+	const vaultPrudentGlUSDP = (await ethers.deployContract(
 		'VaultPrudentGlUSDP',
-		mockUSDC.target,
-		accounts.dao.address,
-		500n,
-		1000n,
+		[mockUSDC.target, accounts.dao.address, 500n, 1000n],
 	)) as VaultPrudentGlUSDP;
-	const mockAdapter1 = (await deployContract(
-		'MockAdapter',
+	const mockAdapter1 = (await ethers.deployContract('MockAdapter', [
 		mockUSDC.target,
 		vaultPrudentGlUSDP.target,
-	)) as MockAdapter;
-	const mockAdapter2 = (await deployContract(
-		'MockAdapter',
+	])) as MockAdapter;
+	const mockAdapter2 = (await ethers.deployContract('MockAdapter', [
 		mockUSDC.target,
 		vaultPrudentGlUSDP.target,
-	)) as MockAdapter;
+	])) as MockAdapter;
 
 	// Mint some USDC to the whale
 	const mintAmount = ethers.parseUnits('1000000', 6); // 1 000 000 USDC
@@ -147,13 +133,12 @@ describe('1. Contract deployments', () => {
 		});
 		it('Should revert if DAO address is 0', async () => {
 			try {
-				await deployContract(
-					'VaultPrudentGlUSDP',
+				await ethers.deployContract('VaultPrudentGlUSDP', [
 					mockUSDC.target,
 					ethers.ZeroAddress,
 					500n,
 					1000n,
-				);
+				]);
 			} catch (error: any) {
 				expect(error.message)
 					.to.include('reverted with custom error')
@@ -166,13 +151,12 @@ describe('1. Contract deployments', () => {
 		});
 		it('Should revert if feesBIPS is not between 0 and 10000', async () => {
 			try {
-				await deployContract(
-					'VaultPrudentGlUSDP',
+				await ethers.deployContract('VaultPrudentGlUSDP', [
 					mockUSDC.target,
 					accounts.dao.address,
 					50000n,
 					1000n,
-				);
+				]);
 			} catch (error: any) {
 				expect(error.message)
 					.to.include('reverted with custom error')
@@ -185,13 +169,12 @@ describe('1. Contract deployments', () => {
 		});
 		it('Should revert if liquidityBufferBIPS is not between 0 and 10000', async () => {
 			try {
-				await deployContract(
-					'VaultPrudentGlUSDP',
+				await ethers.deployContract('VaultPrudentGlUSDP', [
 					mockUSDC.target,
 					accounts.dao.address,
 					500n,
 					50000n,
-				);
+				]);
 			} catch (error: any) {
 				expect(error.message)
 					.to.include('reverted with custom error')
@@ -584,17 +567,16 @@ describe('4. Basic Vault Accounting', () => {
 	let accounts: Accounts;
 	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
 	let mockAdapter1: MockAdapter;
-	let mockAdapter2: MockAdapter;
 	let mockUSDC: MockERC20;
 
 	beforeEach(async () => {
 		accounts = await networkHelpers.loadFixture(getAccounts);
-		({ vaultPrudentGlUSDP, mockAdapter1, mockAdapter2, mockUSDC } =
+		({ vaultPrudentGlUSDP, mockAdapter1, mockUSDC } =
 			await networkHelpers.loadFixture(deployFixture));
 		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
 			{
 				adapter: mockAdapter1.target,
-				repatitionBIPS: 10000n,
+				repartitionBIPS: 10000n,
 				deltaBIPS: 100n,
 			},
 		]);
@@ -700,12 +682,12 @@ describe('5. Asset Management & Rebalancing', () => {
 		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
 			{
 				adapter: mockAdapter1.target,
-				repatitionBIPS: 2000n,
+				repartitionBIPS: 2000n,
 				deltaBIPS: 100n,
 			},
 			{
 				adapter: mockAdapter2.target,
-				repatitionBIPS: 8000n,
+				repartitionBIPS: 8000n,
 				deltaBIPS: 100n,
 			},
 		]);
@@ -769,12 +751,12 @@ describe('6. Yield, Fees & Harvest', () => {
 		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
 			{
 				adapter: mockAdapter1.target,
-				repatitionBIPS: 2000n,
+				repartitionBIPS: 2000n,
 				deltaBIPS: 100n,
 			},
 			{
 				adapter: mockAdapter2.target,
-				repatitionBIPS: 8000n,
+				repartitionBIPS: 8000n,
 				deltaBIPS: 100n,
 			},
 		]);
@@ -874,12 +856,12 @@ describe('7. Withdrawals & Force Divest', () => {
 		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
 			{
 				adapter: mockAdapter1.target,
-				repatitionBIPS: 2000n,
+				repartitionBIPS: 2000n,
 				deltaBIPS: 100n,
 			},
 			{
 				adapter: mockAdapter2.target,
-				repatitionBIPS: 8000n,
+				repartitionBIPS: 8000n,
 				deltaBIPS: 100n,
 			},
 		]);
@@ -1021,12 +1003,12 @@ describe('8. Read Functions', () => {
 		await vaultPrudentGlUSDP.connect(accounts.dao).defineStrategies([
 			{
 				adapter: mockAdapter1.target,
-				repatitionBIPS: 2000n,
+				repartitionBIPS: 2000n,
 				deltaBIPS: 100n,
 			},
 			{
 				adapter: mockAdapter2.target,
-				repatitionBIPS: 8000n,
+				repartitionBIPS: 8000n,
 				deltaBIPS: 100n,
 			},
 		]);
