@@ -148,8 +148,6 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
     /* Team functions */
 
-
-        
     /// @notice Sets the Team address
     /// @param _TeamAddress The address of the Team
     /// @dev The address of the Team that manages the vault
