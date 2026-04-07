@@ -1,0 +1,15 @@
+{
+	"header": {
+		"dashboard": "Tableau de bord",
+		"wallets": "Portefeuilles",
+		"admin": "Administration"
+	},
+	"home": {
+		"welcome": "Bienvenue",
+		"connectLine1": "Connectez votre portefeuille ",
+		"connectLink": "Ethereum",
+		"connectLine2": " pour commencer",
+		"notConnected": "Non Connecté"
+	}
+}
+

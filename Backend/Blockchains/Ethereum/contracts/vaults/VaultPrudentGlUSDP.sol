@@ -25,6 +25,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     error IndexOutOfBounds(uint256 index, uint256 length);
     error NoDataFound();
     error NotADao(address sender);
+    error NotATeam(address sender);
     error NotAmountZero();
 
     /* Events A-Z sorted*/
@@ -34,8 +35,10 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     event Harvest(uint256 yield, uint256 fees, uint256 sharesToMint, uint256 totalAssets);
     event LiquidityBufferBIPSChanged(uint16 oldLiquidityBufferBIPS, uint16 newLiquidityBufferBIPS);
     event NewDAOAddressSetted(address oldDAOAddress, address newDAOAddress);
+    event NewTeamAddressSetted(address oldTeamAddress, address newTeamAddress);
     event Rebalance(bool force, uint256 currentTotalAssets, uint256 newBuffer, uint256 divestedAmout, uint256 reinvestedAmout);
     event StrategiesChanged(Strategy[] newStrategies);
+    event TeamAddressChangedConfirmed(address oldTeamAddress, address newTeamAddress);
     event TotalAssetsChanged(uint256 totalAssets);
 
     /* State variables */
@@ -62,6 +65,10 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /// @dev The address of the DAO that manages the vault
     address public daoAddress;
 
+    /// @notice Team address
+    /// @dev The address of the Team that manages the vault
+    address public teamAddress;
+
     /// @notice Last total assets
     /// @dev The last total assets of the vault
     uint256 public lastTotalAssets;
@@ -69,6 +76,10 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /// @notice New DAO address have to confirm the DAO address change
     /// @dev The new DAO address
     address public newDaoAddress;
+
+    /// @notice New Team address have to confirm the Team address change
+    /// @dev The new Team address
+    address public newTeamAddress;
 
     /* Modifiers */
 
@@ -85,12 +96,27 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         require(msg.sender == newDaoAddress, NotADao(msg.sender));
         _;
     }
+    /// @notice Modifier to check if the caller is the Team
+    /// @dev The caller must be the Team to call this function
+    modifier onlyNewTeam() {
+        require(msg.sender == newTeamAddress, NotATeam(msg.sender));
+        _;
+    }
 
-    constructor(IERC20 _asset, address _daoAddress, uint16 _feesBIPS, uint16 _liquidityBufferBIPS) ERC4626(_asset) ERC20("Glow Prudent", "glUSD-P") {
+    /// @notice Modifier to check if the caller is the DAO
+    /// @dev The caller must be the Team to call this function
+    modifier onlyTeam() {
+        require(msg.sender == teamAddress, NotATeam(msg.sender));
+        _;
+    }
+
+    constructor(IERC20 _asset, address _daoAddress, address _teamAddress, uint16 _feesBIPS, uint16 _liquidityBufferBIPS) ERC4626(_asset) ERC20("Glow Prudent", "glUSD-P") {
         require(_daoAddress != address(0), AddressNotAllowed(msg.sender, _daoAddress));
+        require(_teamAddress != address(0), AddressNotAllowed(msg.sender, _teamAddress));
         require(_feesBIPS <= 10000 && _feesBIPS >= 0, BadPercentage(msg.sender, _feesBIPS));
         require(_liquidityBufferBIPS <= 10000 && _liquidityBufferBIPS >= 0, BadPercentage(msg.sender, _liquidityBufferBIPS));
         daoAddress = _daoAddress;
+        teamAddress = _teamAddress;
         feesBIPS = _feesBIPS;
         liquidityBufferBIPS = _liquidityBufferBIPS;
     }
@@ -120,8 +146,64 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         return usdcBalance;
     }
 
-    /* DAO functions */
+    /* Team functions */
+
+    /// @notice Sets the Team address
+    /// @param _TeamAddress The address of the Team
+    /// @dev The address of the Team that manages the vault
+    function setTeamAddress(address _TeamAddress) external onlyTeam {
+        require(_TeamAddress != address(0) && _TeamAddress != teamAddress && _TeamAddress != address(this), AddressNotAllowed(msg.sender, _TeamAddress));
+        
+        address oldTeamAddress = teamAddress;
+        newTeamAddress = _TeamAddress;
+
+        emit NewTeamAddressSetted(oldTeamAddress, newTeamAddress);
+    }
     
+    /// @notice Confirms the new Team address
+    /// @dev The address of the Team that manages the vault
+    function confirmNewTeamAddress() external onlyNewTeam {
+        require(msg.sender == newTeamAddress, AddressNotAllowed(msg.sender, newTeamAddress));
+        
+        address oldTeamAddress = teamAddress;
+
+        teamAddress = newTeamAddress;
+        newTeamAddress = address(0);
+
+        emit TeamAddressChangedConfirmed(oldTeamAddress, msg.sender);
+    }
+
+
+    /// @notice Harvests the yield from the adapters and mints shares to the DAO
+    /// @dev The yield is calculated as the difference between the current total assets and the last total assets
+    /// @dev The fees are calculated as feesBIPS ‱ of the yield
+    /// @dev The shares are calculated as the fees multiplied by 10000 divided by the last total assets
+    /// @dev The shares are minted to the DAO address
+    /// @dev The last total assets are updated to the current total assets
+    /// @dev The rebalance function is called to rebalance the assets in the vault
+    function harvest() external onlyTeam {
+        uint256 currentTotalAssets = totalAssets();
+        uint256 yield; // 600
+        uint256 fees; // 30
+        uint256 daoSharesToMint; // 18
+
+        if (currentTotalAssets > lastTotalAssets) {
+            yield = currentTotalAssets - lastTotalAssets;
+            fees = _calculateRate_j2P(yield, feesBIPS);
+            daoSharesToMint = previewDeposit(fees);
+
+            _mint(daoAddress, daoSharesToMint);
+        }
+
+        lastTotalAssets = currentTotalAssets;
+
+        emit Harvest(yield, fees, daoSharesToMint, lastTotalAssets);
+
+        _rebalance_X1H(currentTotalAssets, false);
+    }
+
+    /* DAO functions */
+
     /// @notice Sets the DAO address
     /// @param _daoAddress The address of the DAO
     /// @dev The address of the DAO that manages the vault
@@ -192,34 +274,6 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         strategies = _newStrategies;
 
         emit StrategiesChanged(_newStrategies);
-    }
-
-    /// @notice Harvests the yield from the adapters and mints shares to the DAO
-    /// @dev The yield is calculated as the difference between the current total assets and the last total assets
-    /// @dev The fees are calculated as feesBIPS ‱ of the yield
-    /// @dev The shares are calculated as the fees multiplied by 10000 divided by the last total assets
-    /// @dev The shares are minted to the DAO address
-    /// @dev The last total assets are updated to the current total assets
-    /// @dev The rebalance function is called to rebalance the assets in the vault
-    function harvest() external onlyDAO {
-        uint256 currentTotalAssets = totalAssets();
-        uint256 yield; // 600
-        uint256 fees; // 30
-        uint256 daoSharesToMint; // 18
-
-        if (currentTotalAssets > lastTotalAssets) {
-            yield = currentTotalAssets - lastTotalAssets;
-            fees = _calculateRate_j2P(yield, feesBIPS);
-            daoSharesToMint = previewDeposit(fees);
-
-            _mint(daoAddress, daoSharesToMint);
-        }
-
-        lastTotalAssets = currentTotalAssets;
-
-        emit Harvest(yield, fees, daoSharesToMint, lastTotalAssets);
-
-        _rebalance_X1H(currentTotalAssets, false);
     }
 
     /// @notice Forces the rebalance of the vault
