@@ -12,10 +12,8 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 /// @notice This contract is an adapter for Aave protocol
 /// @dev This contract is an adapter for Aave protocol
 /// @custom:studywork Final project to be presented for the defense
-abstract contract AaveAdapterUSDC is IAdapter, ERC165{
+contract AaveAdapterUSDC is IAdapter, ERC165{
     using SafeERC20 for IERC20;
-
-    
     
     /* State variables */
 

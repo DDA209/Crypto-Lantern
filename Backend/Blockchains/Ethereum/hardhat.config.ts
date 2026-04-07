@@ -1,5 +1,7 @@
 import hardhatToolboxMochaEthersPlugin from '@nomicfoundation/hardhat-toolbox-mocha-ethers';
 import { configVariable, defineConfig } from 'hardhat/config';
+import '@nomicfoundation/hardhat-verify';
+import { isKeystoreJson } from 'ethers';
 
 export default defineConfig({
 	plugins: [hardhatToolboxMochaEthersPlugin],
@@ -50,6 +52,11 @@ export default defineConfig({
 				blockNumber: 24_000_000,
 				url: configVariable('MAINNET_RPC_URL'),
 			},
+		},
+	},
+	verify: {
+		etherscan: {
+			apiKey: configVariable('ETHERSCAN_API_KEY'),
 		},
 	},
 });

@@ -43,6 +43,5 @@ interface IAdapter {
     /// @notice Divest assets from the adapter
     /// @dev The assets are divested from the adapter
     /// @param asset The amount of assets to divest
-    function divest(uint256 asset) external;
-    
+    function divest(uint256 asset) external;   
 }

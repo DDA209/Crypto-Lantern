@@ -41,7 +41,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /* State variables */
     struct Strategy {
         IAdapter adapter;
-        uint16 repatitionBIPS;
+        uint16 repartitionBIPS;
         uint16 deltaBIPS;
     }
 
@@ -172,9 +172,9 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     }
 
     /// @notice Defines the strategies.
-    /// @param _newStrategies The new strategies. Attempeted a array of strategies with struct {address adapter, uint16 repatitionBIPS} where adapter is the smart contract address of the adapter and repatitionBIPS is the percentage * 100 of the assets to invest in the adapter. The sum of all repatitionBIPS must be exactly 10000.
+    /// @param _newStrategies The new strategies. Attempeted a array of strategies with struct {address adapter, uint16 repartitionBIPS} where adapter is the smart contract address of the adapter and repartitionBIPS is the percentage * 100 of the assets to invest in the adapter. The sum of all repartitionBIPS must be exactly 10000.
     /// eg. [{0xa123b456C789d012E345f67A901b234C567d890, 5417}, {0xb234c567d890a123b456C789d012E345f67A901b, 4583}, ...]
-    /// @dev The strategies are used to invest. The sum of all repatitionBIPS must be exactly 10000.
+    /// @dev The strategies are used to invest. The sum of all repartitionBIPS must be exactly 10000.
     function defineStrategies(Strategy[] calldata _newStrategies) external onlyDAO {
         require(_newStrategies.length > 0, NoDataFound());
         uint16 totalRepartitionBIPS = 0;
@@ -182,10 +182,10 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         for (uint256 i = 0; i < _newStrategies.length; i++) {
             require(_newStrategies[i].adapter.supportsInterface(type(IAdapter).interfaceId),AddressNotAllowed(msg.sender, address(_newStrategies[i].adapter)));
             require(address(_newStrategies[i].adapter) != address(0) && address(_newStrategies[i].adapter) != address(this),AddressNotAllowed(msg.sender, address(_newStrategies[i].adapter)));
-            require(_newStrategies[i].repatitionBIPS <= 10000 && _newStrategies[i].repatitionBIPS > 0, BadPercentage(msg.sender, _newStrategies[i].repatitionBIPS));
+            require(_newStrategies[i].repartitionBIPS <= 10000 && _newStrategies[i].repartitionBIPS > 0, BadPercentage(msg.sender, _newStrategies[i].repartitionBIPS));
             require(_newStrategies[i].deltaBIPS <= 10000 && _newStrategies[i].deltaBIPS > 0, BadPercentage(msg.sender, _newStrategies[i].deltaBIPS));
 
-            totalRepartitionBIPS += _newStrategies[i].repatitionBIPS;
+            totalRepartitionBIPS += _newStrategies[i].repartitionBIPS;
         }
         require(totalRepartitionBIPS == 10000, BadPercentage( msg.sender, totalRepartitionBIPS));
         
@@ -241,7 +241,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
         for (uint256 index = 0; index < strategyLength; index++) {
             uint256 currentStrategyInvestedAmount = strategies[index].adapter.getInvestedAssets(); // 850; 650 //= 1500 //// 0; 0
-            uint256 targetStrategyInvestedAmount = _calculateRate_j2P(targetInvestedAmount, strategies[index].repatitionBIPS); // 1440 * 0.2 = 288; 1440 * 0.8 = 1152 //// 900 * 0.2 = 180; 900 * 0.8 = 720
+            uint256 targetStrategyInvestedAmount = _calculateRate_j2P(targetInvestedAmount, strategies[index].repartitionBIPS); // 1440 * 0.2 = 288; 1440 * 0.8 = 1152 //// 900 * 0.2 = 180; 900 * 0.8 = 720
             uint256 deltaStrategy = _calculateRate_j2P(targetInvestedAmount, strategies[index].deltaBIPS); // 1440 * 0.02 = 28.8; 1440 * 0.02 = 28.8 //// 900 * 0.02 = 18; 900 * 0.02 = 18
 
             if (currentStrategyInvestedAmount > targetStrategyInvestedAmount + deltaStrategy) { // 180 > (850 + 28.8 = 878.8) true; 720 > (650 + 28.8 = 678.8) false //// 0 > (0 + 18 = 18) false; 0 > (0 + 18 = 18) false
@@ -338,7 +338,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
             if (i == strategies.length - 1) { // Because of rounding issues, the last strategy must take the remaining amount
                 amountToDivest = Math.min(remainingToDivest, actualBalance);
             } else {
-                uint256 targetAmount = _calculateRate_j2P(totalAmountToDivest, strategies[i].repatitionBIPS);
+                uint256 targetAmount = _calculateRate_j2P(totalAmountToDivest, strategies[i].repartitionBIPS);
                 amountToDivest = Math.min(targetAmount, actualBalance);
             }
 
