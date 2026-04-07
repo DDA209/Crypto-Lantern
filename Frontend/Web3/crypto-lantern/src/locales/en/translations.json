@@ -1,0 +1,15 @@
+{
+	"header": {
+		"dashboard": "Dashboard",
+		"wallets": "Wallets",
+		"admin": "Administration"
+	},
+	"home": {
+		"welcome": "Welcome",
+		"connectLine1": "Connect your ",
+		"connectLink": "Ethereum",
+		"connectLine2": " wallet to get started",
+		"notConnected": "Not Connected"
+	}
+}
+
