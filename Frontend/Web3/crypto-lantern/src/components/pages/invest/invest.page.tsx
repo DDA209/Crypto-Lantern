@@ -1,93 +1,232 @@
 'use client';
 
-import { RiskProfile, VaultCard } from '@/components/ui/cards/VaultCard';
+import { useState, useEffect, useCallback } from 'react';
 import {
 	useAccount,
-	useWriteContract,
-	useWaitForTransactionReceipt,
 	useReadContract,
+	useChainId,
+	useWriteContract,
+	usePublicClient,
 } from 'wagmi';
-import { useState } from 'react';
+import { Address, formatUnits, parseAbiItem, parseUnits, type Abi } from 'viem';
+import { useLantern } from '@/context/LanternContext';
+import VaultPrudentGlUSDPABI from '@/context/VaultPrudentGlUSDP.json';
+import MockERC20ABI from '@/context/MockERC20.json';
 import usdcAbi from '@/context/USDC.json';
-import { Address } from 'viem';
-import { PROFILES } from '@/config/profiles';
+import { MovementCard } from '@/components/shared/cards/movements/MovementCard';
+import { getProfiles } from '@/config/profiles';
+import { RiskProfile } from '@/data/interfaces/vault';
+import { NETWORK_CONFIG } from '@/config/NetworkConfig';
+import { publicClient } from '@/lib/client';
+import { MovementEvent } from '@/data/types/MovementEvent';
+import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
 
-const usdcAddress = process.env.NEXT_PUBLIC_USDC_ADDRESS as Address;
+export default function Invest() {
+	const { address } = useAccount();
+	const chainId = useChainId();
+	const { vaultPrudentGlUSDPAddress, usdcAddress } = useLantern();
 
-const RISK_PROFILES: RiskProfile[] = PROFILES.map((profile) => {
-	return {
-		id: profile.id,
-		name: profile.name,
-		icon: profile.icon,
-		expectedApy: {calculateApy(profile.id)},
-		isActive: profile.isActive,
-		colorClass: profile.colorClass,
+	const [events, setEvents] = useState<MovementEvent[]>([]);
+	const [loadingEvents, setLoadingEvents] = useState(false);
+
+	const baseProfiles = getProfiles(chainId);
+
+	const { data: currentSharePrice } = useReadContract({
+		address: vaultPrudentGlUSDPAddress,
+		abi: VaultPrudentGlUSDPABI as Abi,
+		functionName: 'convertToAssets',
+		args: [1000000n],
+	});
+
+	// Lecture du timestamp de déploiement pour calculer l'APY
+	const { data: deploymentTimestamp } = useReadContract({
+		address: vaultPrudentGlUSDPAddress,
+		abi: VaultPrudentGlUSDPABI as Abi,
+		functionName: 'deploymentTimestamp',
+	});
+
+	const calculateVaultAPY = (profileId: string): number => {
+		if (
+			profileId !== 'glUSD-P' ||
+			!currentSharePrice ||
+			!deploymentTimestamp
+		)
+			return 0;
+
+		const initialPrice = 1000000n; // 1.00 USDC
+		const currentPrice = currentSharePrice as bigint;
+		const startTs = Number(deploymentTimestamp as bigint);
+		const nowTs = Math.floor(Date.now() / 1000);
+
+		const daysPassed = (nowTs - startTs) / (24 * 3600);
+		if (daysPassed < 1) return 5.25;
+
+		const yieldRate = Number(currentPrice) / Number(initialPrice);
+		const apy = (Math.pow(yieldRate, 365 / daysPassed) - 1) * 100;
+
+		return parseFloat(apy.toFixed(2));
 	};
-});
 
-const calculateApy = (profile: RiskProfile) => {
-	
-};
+	// const calculateUserAPY = (): number => {
+	// 	// Use all user transactions of deposit and withdraw to calculate the user APY end share value to define the user APY
+	// 	return 0;
+	// };
 
-const usdcUserBalance = () => {
-	const { address } = useAccount();
-	const { data: usdcUserBalance, error, isLoading } = useReadContract({
-		abi: usdcAbi,
+	const RISK_PROFILES: RiskProfile[] = baseProfiles.map((profile) => ({
+		...profile,
+		expectedAPY: calculateVaultAPY(profile.id),
+	}));
+
+	// On prend le premier profil actif par défaut pour l'affichage de base
+	const activeVaultProfile = RISK_PROFILES[0];
+
+	const getEvents = useCallback(async () => {
+		if (!vaultPrudentGlUSDPAddress || !chainId) return;
+		setLoadingEvents(true);
+		const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
+		try {
+			const depositEvents = await publicClient(chainId).getLogs({
+				address: vaultPrudentGlUSDPAddress,
+				event: parseAbiItem(
+					'event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)',
+				),
+				fromBlock,
+				toBlock: 'latest',
+			});
+			const withdrawEvents = await publicClient(chainId).getLogs({
+				address: vaultPrudentGlUSDPAddress,
+				event: parseAbiItem(
+					'event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)',
+				),
+				fromBlock,
+				toBlock: 'latest',
+			});
+			const combined: MovementEvent[] = [
+				...depositEvents.map((e) => ({
+					address: (e.args.sender?.toString() ?? '') as Address,
+					assetsAmount: e.args.assets ?? 0n,
+					sharesAmount: e.args.shares ?? 0n,
+					blockNumber: Number(e.blockNumber),
+					transactionHash: e.transactionHash,
+					type: 'Dépôt' as const,
+				})),
+				...withdrawEvents.map((e) => ({
+					address: (e.args.sender?.toString() ?? '') as Address,
+					assetsAmount: e.args.assets ?? 0n,
+					sharesAmount: e.args.shares ?? 0n,
+					blockNumber: Number(e.blockNumber),
+					transactionHash: e.transactionHash,
+					type: 'Retrait' as const,
+				})),
+			];
+			setEvents(combined.sort((a, b) => b.blockNumber - a.blockNumber));
+		} catch {
+			setEvents([]);
+		} finally {
+			setLoadingEvents(false);
+		}
+	}, [vaultPrudentGlUSDPAddress, chainId]);
+
+	useEffect(() => {
+		getEvents();
+	}, [vaultPrudentGlUSDPAddress, chainId, getEvents]);
+
+	const { writeContract } = useWriteContract();
+
+	const { data: usdcBalanceData, refetch: refetchUsdc } = useReadContract({
+		abi: usdcAbi as Abi,
 		address: usdcAddress,
 		functionName: 'balanceOf',
-		args: [address],
+		args: address ? [address] : undefined,
+		query: { enabled: !!address },
 	});
-	return usdcUserBalance;
+
+	const { data: sharesBalanceData, refetch: refetchShares } = useReadContract(
+		{
+			abi: activeVaultProfile?.vaultAbi,
+			address: activeVaultProfile?.vaultAddress as Address,
+			functionName: 'balanceOf',
+			args: address ? [address] : undefined,
+			query: { enabled: !!address && !!activeVaultProfile?.vaultAddress },
+		},
+	);
+
+	const formattedUsdcBalance = usdcBalanceData
+		? formatUnits(usdcBalanceData as bigint, 6)
+		: '0.00';
+	const formattedSharesBalance = sharesBalanceData
+		? formatUnits(sharesBalanceData as bigint, 6)
+		: '0.00';
+
+	const refetchAll = useCallback(() => {
+		refetchUsdc();
+		refetchShares();
+	}, [refetchUsdc, refetchShares]);
+
+	const mintUSDC = () => {
+		if (!address || !usdcAddress) {
+			console.error(
+				`Address ${address ? '✅' : '❌'} | Mock USDC Address ${usdcAddress ? '✅' : '❌'}`,
+			);
+			return;
+		}
+		if (chainId !== 31337) {
+			console.error(`chainId ${chainId} is not 31337`);
+			return;
+		}
+		console.log(
+			`Minting USDC to address ${address} from Mock USDC Address ${usdcAddress}`,
+		);
+		writeContract({
+			address: usdcAddress,
+			abi: MockERC20ABI as Abi,
+			functionName: 'mint',
+			args: [address, parseUnits('1000', 6)],
+		});
+	};
+
+	return (
+		<div className='flex flex-col gap-8 items-center justify-center py-2 max-w-6xl mx-auto px-4'>
+			<div className='flex flex-row gap-8 items-center max-w-6xl'>
+				{/* CARTE DE DÉPÔT */}
+				<MovementCard
+					refetch={refetchAll}
+					getEvents={getEvents}
+					mode='deposit'
+					chainId={chainId}
+					profiles={RISK_PROFILES}
+					balance={formattedUsdcBalance}
+					globalAPY={calculateVaultAPY('USDC')}
+					onRequestTestTokens={mintUSDC}
+					assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
+					shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
+					vaultAddress={vaultPrudentGlUSDPAddress as Address}
+					vaultAbi={VaultPrudentGlUSDPABI as Abi}
+					assetAddress={usdcAddress as Address}
+				/>
+
+				{/* CARTE DE RETRAIT */}
+				<MovementCard
+					refetch={refetchAll}
+					getEvents={getEvents}
+					mode='withdraw'
+					chainId={chainId}
+					profiles={RISK_PROFILES}
+					balance={formattedSharesBalance}
+					// userAPY={calculateUserAPY()}
+					assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
+					shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
+					vaultAddress={vaultPrudentGlUSDPAddress as Address}
+					vaultAbi={VaultPrudentGlUSDPABI as Abi}
+					assetAddress={usdcAddress as Address}
+				/>
+			</div>
+			<EventLogsCard
+				title='Historique de vos mouvements'
+				events={events}
+				loading={loadingEvents}
+				className='w-full'
+			/>
+		</div>
+	);
 }
-const userSharesTokenBalance = (riskProfileId: string) => {
-	const { address } = useAccount();
-	const { data: usdcUserBalance, error, isLoading } = useReadContract({
-		abi: riskProfileId,
-		address: usdcAddress,
-		functionName: 'balanceOf',
-		args: [address],
-	});
-	return usdcUserBalance;
-}
-
-const selectedRiskProfil = RISK_PROFILES[0];
-
-const Invest = () => {
-	const {
-		data: usdcUserBalance,
-		error,
-		isLoading,
-	} = useReadContract({
-		abi: usdcAbi,
-		address: usdcAddress,
-		functionName: 'balanceOf',
-		args: [address],
-	});
-
-	<>
-		<VaultCard
-			mode='deposit'
-			networks={[{ id: 11155111, name: 'Sepolia' }]}
-			profiles={RISK_PROFILES}
-			balance={usdcUserBalance()}
-			globalApy={4.52}
-			onAction={(amount, profile) =>
-				console.log(`Déposer ${amount} sur ${profile}`)
-			}
-			onRequestTestTokens={() => console.log('Mint Mock USDC')}
-		/>
-		<VaultCard
-			mode='withdraw'
-			networks={[{ id: 11155111, name: 'Sepolia' }]}
-			profiles={RISK_PROFILES}
-			balance={userSharesTokenBalance(selectedRiskProfil.id)}
-			globalApy={4.52}
-			onAction={(amount, profile) =>
-				console.log(`Déposer ${amount} sur ${profile}`)
-			}
-			onRequestTestTokens={() => console.log('Mint Mock USDC')}
-		/>
-	</>;
-};
-
-export default Invest;

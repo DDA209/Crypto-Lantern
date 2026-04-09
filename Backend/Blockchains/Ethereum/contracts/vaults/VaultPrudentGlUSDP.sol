@@ -30,6 +30,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
     /* Events A-Z sorted*/
     event DAOAddressChangedConfirmed(address oldDAOAddress, address newDAOAddress);
+    event DepositReceived(address sender, uint256 amount);
     event FeesBIPSChanged(uint16 oldFeesBIPS, uint16 newFeesBIPS);
     event ForceDivest(uint256 amount, uint256 totalAmountToDivest, uint256 remainingToDivest);
     event Harvest(uint256 yield, uint256 fees, uint256 sharesToMint, uint256 totalAssets);
@@ -420,4 +421,6 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         target = (total * bips) / 10000;
         return target;
     }
+
+    receive() external payable{ emit DepositReceived(msg.sender, msg.value); }
 }

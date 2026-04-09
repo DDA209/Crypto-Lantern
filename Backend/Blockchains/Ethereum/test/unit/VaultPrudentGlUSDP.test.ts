@@ -7,7 +7,6 @@ import {
 	MockAdapter,
 } from '../../types/ethers-contracts/index.js';
 import { Addressable, BigNumberish, ContractTransactionResponse } from 'ethers';
-import 'hardhat-gas-reporter';
 
 const { ethers, networkHelpers } = await network.connect();
 const currentBlock = await ethers.provider.getBlockNumber();
@@ -53,11 +52,13 @@ const deployFixture = async (): Promise<{
 	])) as MockERC20;
 	const vaultPrudentGlUSDP = (await ethers.deployContract(
 		'VaultPrudentGlUSDP',
-		mockUSDC.target,
-		accounts.dao.address,
-		accounts.team.address,
-		500n,
-		1000n,
+		[
+			mockUSDC.target,
+			accounts.dao.address,
+			accounts.team.address,
+			500n,
+			1000n,
+		],
 	)) as VaultPrudentGlUSDP;
 	const mockAdapter1 = (await ethers.deployContract('MockAdapter', [
 		mockUSDC.target,

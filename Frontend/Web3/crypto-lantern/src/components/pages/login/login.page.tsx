@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppTitle from '@/components/shared/AppTitle';
-import ConnectButton from '@/components/ui/buttons/ConnectButton';
+import ConnectButton from '@/components/shared/buttons/ConnectButton';
 import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import Link from 'next/link';
 
@@ -29,6 +29,18 @@ const NotConnected = () => {
 						<AppTitle rounded={true} />
 					</div>
 				</div>
+				{/* <video
+					width='100%'
+					height='100%'
+					controls
+					preload='none'
+				>
+					<source
+						src='/start-1.mp4'
+						type='video/mp4'
+					/>
+					Your browser does not support the video tag.
+				</video> */}
 			</div>
 			<div
 				id='right-column'

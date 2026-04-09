@@ -1,55 +1,93 @@
 'use client';
 
 import React, { createContext, useContext } from 'react';
-import { useConnection, useReadContract } from 'wagmi';
+import { useAccount, useReadContract } from 'wagmi';
 import { Address } from 'viem';
 import VaultPrudentGlUSDPABI from './VaultPrudentGlUSDP.json';
-
-interface LanternContextType {
-	isConnected: boolean;
-	address: Address | undefined;
-	isDao: boolean;
-	isNewDao: boolean;
-	isUser: boolean;
-}
+import LanternContextType from '@/data/interfaces/LanternContext';
 
 const LanternContext = createContext<LanternContextType>({
 	isConnected: false,
-	address: undefined,
+	userAddress: undefined,
+	vaultPrudentGlUSDPAddress: undefined,
+	usdcAddress: undefined,
 	isDao: false,
 	isNewDao: false,
-	isUser: false,
+	isTeam: false,
+	isNewTeam: false,
 });
+
+const getContractsAddress = (chainId?: number) => {
+	switch (chainId) {
+		case 1:
+			return {
+				vaultPrudentGlUSDPAddress: process.env
+					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_MAINNET as Address,
+				usdcAddress: process.env
+					.NEXT_PUBLIC_USDC_ADDRESS_MAINNET as Address,
+			};
+		case 11155111:
+			return {
+				vaultPrudentGlUSDPAddress: process.env
+					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA as Address,
+				usdcAddress: process.env
+					.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA as Address,
+			};
+		case 31337:
+		default:
+			return {
+				vaultPrudentGlUSDPAddress: process.env
+					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_HARDHAT as Address,
+				usdcAddress: process.env
+					.NEXT_PUBLIC_USDC_ADDRESS_HARDHAT as Address,
+			};
+	}
+};
 
 export const LanternProvider = ({
 	children,
 }: {
 	children: React.ReactNode;
 }) => {
-	const { address, isConnected } = useConnection();
-	const contractAddress = process.env.NEXT_PUBLIC_VAULT_ADDRESS as Address;
+	const { address: userAddress, isConnected, chainId } = useAccount();
+	const { vaultPrudentGlUSDPAddress, usdcAddress } =
+		getContractsAddress(chainId);
+
+	const baseConfig = {
+		address: vaultPrudentGlUSDPAddress,
+		abi: VaultPrudentGlUSDPABI,
+		query: { enabled: isConnected && !!vaultPrudentGlUSDPAddress },
+	};
 
 	const { data: daoAddress } = useReadContract({
-		address: contractAddress,
-		abi: VaultPrudentGlUSDPABI,
-		functionName: 'dao',
-		query: { enabled: isConnected },
+		...baseConfig,
+		functionName: 'daoAddress',
 	});
-
 	const { data: newDaoAddress } = useReadContract({
-		address: contractAddress,
-		abi: VaultPrudentGlUSDPABI,
-		functionName: 'dao',
-		query: { enabled: isConnected },
+		...baseConfig,
+		functionName: 'newDaoAddress',
 	});
-
-	const isDao = isConnected && daoAddress === address;
-	const isNewDao = isConnected && newDaoAddress === address;
-	const isUser = isConnected;
+	const { data: teamAddress } = useReadContract({
+		...baseConfig,
+		functionName: 'teamAddress',
+	});
+	const { data: newTeamAddress } = useReadContract({
+		...baseConfig,
+		functionName: 'newTeamAddress',
+	});
 
 	return (
 		<LanternContext.Provider
-			value={{ isConnected, address, isDao, isNewDao, isUser }}
+			value={{
+				isConnected,
+				userAddress,
+				vaultPrudentGlUSDPAddress,
+				usdcAddress,
+				isDao: isConnected && daoAddress === userAddress,
+				isNewDao: isConnected && newDaoAddress === userAddress,
+				isTeam: isConnected && teamAddress === userAddress,
+				isNewTeam: isConnected && newTeamAddress === userAddress,
+			}}
 		>
 			{children}
 		</LanternContext.Provider>
@@ -58,3 +96,4 @@ export const LanternProvider = ({
 
 export const useLantern = () => useContext(LanternContext);
 
+export default LanternProvider;

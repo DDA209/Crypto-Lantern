@@ -14,7 +14,7 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 /// @custom:studywork Final project to be presented for the defense
 contract AaveAdapterUSDC is IAdapter, ERC165{
     using SafeERC20 for IERC20;
-    
+
     /* State variables */
 
     IERC20 public usdc;
@@ -78,4 +78,6 @@ contract AaveAdapterUSDC is IAdapter, ERC165{
 
         emit Divest(msg.sender, usdcAmount);
     }
+
+    receive() external payable{ emit DepositReceived(msg.sender); }
 }

@@ -4,7 +4,7 @@ import { wagmiAdapter, projectId, appName } from '@/config';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { createAppKit } from '@reown/appkit/react';
 import {
-	// mainnet,
+	mainnet,
 	// arbitrum,
 	sepolia,
 	hardhat,
@@ -33,9 +33,9 @@ const modal = createAppKit({
 	adapters: [wagmiAdapter],
 	projectId,
 	networks: [
-		// mainnet,
+		mainnet,
 		// arbitrum,
-		// sepolia,
+		sepolia,
 		hardhat,
 	],
 	defaultNetwork: hardhat,

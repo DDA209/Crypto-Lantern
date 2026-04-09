@@ -19,12 +19,17 @@ interface IAdapter {
     /// @param user The address of the user who invested the assets
     /// @param assets The amount of assets invested
     event Invest(address indexed user, uint256 assets);
-    
+
     /// @notice Emitted when assets are divested from the adapter
     /// @dev The assets are divested from the adapter
     /// @param user The address of the user who divested the assets
     /// @param assets The amount of assets divested
     event Divest(address indexed user, uint256 assets);
+    
+    /// @notice Emitted when assets are received by the adapter
+    /// @dev The assets are received by the adapter
+    /// @param sender The address of the sender
+    event DepositReceived(address indexed sender);
     
     /* Functions */
 
