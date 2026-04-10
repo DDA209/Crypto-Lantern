@@ -40,14 +40,13 @@ export const MovementCard = ({
 	chainId,
 	profiles,
 	balance,
-	globalAPY,
-	userAPY,
 	assetSymbol,
 	shareSymbol,
 	vaultAddress,
 	vaultAbi,
 	assetAddress,
 	// onAction,
+	onRequestMockTokens,
 	onRequestTestTokens,
 }: MovementCardProps) => {
 	const [amount, setAmount] = useState<string>('');
@@ -61,13 +60,8 @@ export const MovementCard = ({
 	const { t } = useTranslation();
 	const { address } = useAccount();
 	const { theme } = useTheme();
-	const {
-		data: hash,
-		error,
-		isPending,
-		writeContract,
-		reset,
-	} = useWriteContract();
+	const { data: hash, error, reset } = useWriteContract();
+
 	const {
 		isLoading: isConfirming,
 		isSuccess: isConfirmed,
@@ -336,19 +330,24 @@ export const MovementCard = ({
 								{mode === 'deposit' ? assetSymbol : shareSymbol}
 							</span>
 						</div>
-						{chainId === 31337 && mode === 'deposit' && (
-							<Button
-								variant='ghost'
-								size='sm'
-								onClick={onRequestTestTokens}
-								className='text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-200 rounded-full h-5 px-1'
-							>
-								+ 1 000 USDC
-							</Button>
-						)}
+						{(chainId === 31337 || chainId === 11155111) &&
+							mode === 'deposit' && (
+								<Button
+									variant='ghost'
+									size='sm'
+									onClick={
+										chainId === 31337
+											? onRequestMockTokens
+											: onRequestTestTokens
+									}
+									className='text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-200 rounded-full h-5 px-1'
+								>
+									+ 1 000 USDC
+								</Button>
+							)}
 					</div>
 
-					{/* Affichage Dynamique de l'APY */}
+					{/* Affichage Dynamique de l'APY
 					<div className='bg-white/50 rounded-2xl p-4 border border-lgrey flex justify-between items-center'>
 						<div>
 							<p className='text-xs font-semibold text-navy/50 uppercase tracking-wider'>
@@ -363,7 +362,7 @@ export const MovementCard = ({
 								</span>
 							</p>
 						</div>
-					</div>
+					</div> */}
 
 					<div>
 						<label className='text-xs font-semibold text-navy/50 uppercase tracking-wider mb-2 block'>
@@ -421,7 +420,7 @@ export const MovementCard = ({
 											: 'border-lgrey bg-white/50 text-navy/70 hover:border-navy/20'
 									}`}
 								>
-									<span className='text-base flex-shrink-0'>
+									<span className='text-base shrink-0'>
 										{profile.icon}
 									</span>
 									<div className='min-w-0'>
@@ -452,16 +451,16 @@ export const MovementCard = ({
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
 								disabled={!activeProfile?.isActive}
-								className='w-full bg-white border-2 border-lgrey rounded-2xl px-4 py-6 text-2xl font-bold text-navy placeholder:text-navy/20 focus-visible:ring-0 focus-visible:border-[#28B092] transition-colors pr-14 h-auto'
+								className='text-2xl lw-full bg-white border-2 border-lgrey rounded-xl px-4 py-6 font-bold text-navy placeholder:text-navy/20 focus-visible:ring-0 focus-visible:border-[#28B092] transition-colors pr-22'
 							/>
 							<div className='absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2'>
-								{/* <button
+								<button
 									onClick={() => setAmount(balance)}
 									disabled={!activeProfile?.isActive}
 									className='text-xs font-bold text-[#28B092] hover:text-[#2ABFAB] disabled:text-navy/30 transition-colors'
 								>
 									MAX
-								</button> */}
+								</button>
 								<span className='text-sm font-semibold text-navy/60'>
 									USDC
 								</span>
@@ -495,7 +494,7 @@ export const MovementCard = ({
 							!amount
 						}
 						onClick={handleInitialClick}
-						className='w-full rounded-2xl py-6 text-lg font-bold bg-[#28B092] hover:bg-[#2ABFAB] text-white disabled:opacity-40'
+						className='w-full rounded-xl py-6 text-lg font-bold bg-[#28B092] hover:bg-[#2ABFAB] text-white disabled:opacity-40'
 					>
 						{isExecuting ? (
 							<Loader2 className='mr-2 h-5 w-5 animate-spin' />

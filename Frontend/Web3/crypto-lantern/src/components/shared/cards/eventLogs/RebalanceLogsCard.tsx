@@ -21,6 +21,7 @@ import {
 	// Link,
 	Loader2,
 } from 'lucide-react';
+import { formatUnits } from 'viem';
 
 interface RebalanceEventLogsCardProps {
 	title: string;
@@ -49,9 +50,9 @@ export const RebalanceEventLogsCard = ({
 				<TableHeader>
 					<TableRow>
 						<TableHead>Origine</TableHead>
-						<TableHead>Valeur du Buffer</TableHead>
-						<TableHead>Retiré pour réallocation</TableHead>
-						<TableHead>Réinvesti</TableHead>
+						<TableHead>Part du buffer</TableHead>
+						<TableHead>Part investie</TableHead>
+						<TableHead>Part réinvestie</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -60,9 +61,15 @@ export const RebalanceEventLogsCard = ({
 							<TableCell>
 								{event.force ? 'Manuel' : 'Harvest'}
 							</TableCell>
-							<TableCell>{event.newBuffer}</TableCell>
-							<TableCell>{event.divestedAmout}</TableCell>
-							<TableCell>{event.reinvestedAmout}</TableCell>
+							<TableCell>
+								{formatUnits(event.newBuffer ?? 0n, 6)}
+							</TableCell>
+							<TableCell>
+								{formatUnits(event.currentTotalAssets ?? 0n, 6)}
+							</TableCell>
+							<TableCell>
+								{formatUnits(event.reinvestedAmout ?? 0n, 6)}
+							</TableCell>
 						</TableRow>
 					))}
 				</TableBody>

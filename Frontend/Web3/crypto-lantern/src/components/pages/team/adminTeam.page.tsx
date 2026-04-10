@@ -104,9 +104,8 @@ export default function AdminTeam() {
 				(log) => {
 					return {
 						force: log.args.force ?? false,
-						currentTotalAssets: log.args.currentTotalAssets ?? 0n,
-						newBuffer: log.args.newBuffer ?? 0n,
-						divestedAmout: log.args.divestedAmout ?? 0n,
+						newBuffer: log.args.newBuffer ?? 0n, // Buffer
+						currentTotalAssets: log.args.currentTotalAssets ?? 0n, // TVL
 						reinvestedAmout: log.args.reinvestedAmout ?? 0n,
 						blockNumber: Number(log.blockNumber),
 						transactionHash: log.transactionHash,
@@ -162,7 +161,6 @@ export default function AdminTeam() {
 		}
 	};
 
-	// --- FONCTION 2 : PROPOSER UNE NOUVELLE TEAM ---
 	const handleSetTeamAddress = async () => {
 		if (!publicClient || !vaultPrudentGlUSDPAddress) return;
 
@@ -206,7 +204,6 @@ export default function AdminTeam() {
 		}
 	};
 
-	// --- FONCTION 3 : CONFIRMER LA NOUVELLE TEAM ---
 	const handleConfirmTeamAddress = async () => {
 		if (!publicClient || !vaultPrudentGlUSDPAddress) return;
 		setIsExecuting(true);
@@ -247,7 +244,7 @@ export default function AdminTeam() {
 	// --- AFFICHAGE : NON AUTORISÉ ---
 	if (!isTeam && !isNewTeam) {
 		return (
-			<div className='flex flex-col items-center justify-center py-20 text-center'>
+			<div className='flex flex-col items-center max-w-4xl mx-auto px-4 space-y-8 py-20 text-center'>
 				<ShieldAlert className='h-16 w-16 text-red-500/50 mb-4' />
 				<h2 className='text-2xl font-bold text-navy mb-2'>
 					Accès Restreint
@@ -306,84 +303,88 @@ export default function AdminTeam() {
 
 			{/* PANNEAUX DE LA TEAM ACTUELLE */}
 			{isTeam && (
-				<div className='grid md:grid-cols-2 gap-6'>
-					{/* CARTE HARVEST */}
-					<Card className='shadow-lg border-none bg-white'>
-						<CardHeader className='bg-[#28B092]/10 rounded-t-xl'>
-							<CardTitle className='text-[#28B092] flex items-center gap-2'>
-								<Wheat className='h-5 w-5' />
-								Exécuter le Harvest
-							</CardTitle>
-						</CardHeader>
-						<CardContent className='pt-6 space-y-4'>
-							<p className='text-sm text-navy/70'>
-								Récolte les rendements générés par les
-								stratégies, prélève les frais et rééquilibre le
-								tampon de liquidité (Buffer).
-							</p>
-							<Button
-								onClick={handleHarvest}
-								disabled={isExecuting}
-								className='w-full bg-[#28B092] hover:bg-[#2ABFAB] text-white font-bold'
-							>
-								{isExecuting ? (
-									<Loader2 className='mr-2 h-5 w-5 animate-spin' />
-								) : null}
-								Lancer le Harvest
-							</Button>
-						</CardContent>
-					</Card>
-
-					{/* CARTE CHANGEMENT DE TEAM */}
-					<Card className='shadow-lg border-none bg-white'>
-						<CardHeader className='bg-navy/5 rounded-t-xl'>
-							<CardTitle className='text-navy flex items-center gap-2'>
-								<UserCog className='h-5 w-5' />
-								Transférer les droits Team
-							</CardTitle>
-						</CardHeader>
-						<CardContent className='pt-6 space-y-4'>
-							<p className='text-sm text-navy/70'>
-								Saisissez l&apos;adresse Ethereum de la nouvelle
-								Team. Ce transfert nécessite une confirmation de
-								la part du destinataire.
-							</p>
-							<div className='space-y-2'>
-								<Input
-									placeholder='0x...'
-									value={newAddressInput}
-									onChange={(e) =>
-										setNewAddressInput(e.target.value)
-									}
-									disabled={isExecuting}
-									className='font-mono text-sm'
-								/>
+				<>
+					<div className='grid md:grid-cols-2 gap-6'>
+						{/* CARTE HARVEST */}
+						<Card className='shadow-lg border-none'>
+							<CardHeader className='bg-[#28B092]/10 rounded-t-xl'>
+								<CardTitle className='text-[#28B092] flex items-center gap-2'>
+									<Wheat className='h-5 w-5' />
+									Exécuter le Harvest
+								</CardTitle>
+							</CardHeader>
+							<CardContent className='pt-6 space-y-4'>
+								<p className='text-sm text-navy/70'>
+									Récolte les rendements générés par les
+									stratégies, prélève les frais et rééquilibre
+									le tampon de liquidité (Buffer).
+								</p>
 								<Button
-									onClick={handleSetTeamAddress}
-									disabled={isExecuting || !newAddressInput}
-									variant='outline'
-									className='w-full border-navy text-navy hover:bg-navy hover:text-white transition-colors'
+									onClick={handleHarvest}
+									disabled={isExecuting}
+									className='w-full bg-[#28B092] hover:bg-[#2ABFAB] text-white font-bold'
 								>
 									{isExecuting ? (
 										<Loader2 className='mr-2 h-5 w-5 animate-spin' />
 									) : null}
-									Proposer cette adresse
+									Lancer le Harvest
 								</Button>
-							</div>
-						</CardContent>
-					</Card>
-				</div>
+							</CardContent>
+						</Card>
+
+						{/* CARTE CHANGEMENT DE TEAM */}
+						<Card className='shadow-lg border-none'>
+							<CardHeader className='bg-navy/5 rounded-t-xl'>
+								<CardTitle className='text-navy flex items-center gap-2'>
+									<UserCog className='h-5 w-5' />
+									Transférer les droits Team
+								</CardTitle>
+							</CardHeader>
+							<CardContent className='pt-6 space-y-4'>
+								<p className='text-sm text-navy/70'>
+									Saisissez l&apos;adresse Ethereum de la
+									nouvelle Team. Ce transfert nécessite une
+									confirmation de la part du destinataire.
+								</p>
+								<div className='space-y-2'>
+									<Input
+										placeholder='0x...'
+										value={newAddressInput}
+										onChange={(e) =>
+											setNewAddressInput(e.target.value)
+										}
+										disabled={isExecuting}
+										className='font-mono text-sm'
+									/>
+									<Button
+										onClick={handleSetTeamAddress}
+										disabled={
+											isExecuting || !newAddressInput
+										}
+										variant='outline'
+										className='w-full border-navy text-navy hover:bg-navy hover:text-white transition-colors'
+									>
+										{isExecuting ? (
+											<Loader2 className='mr-2 h-5 w-5 animate-spin' />
+										) : null}
+										Proposer cette adresse
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
+					</div>
+					<HarvestEventLogsCard
+						title='Historique des Harvests'
+						events={harvestEvents}
+						loading={loadingHarvestEvents}
+					/>
+					<RebalanceEventLogsCard
+						title='Historique des Rebalances'
+						events={rebalanceEvents}
+						loading={loadingRebalanceEvents}
+					/>
+				</>
 			)}
-			<HarvestEventLogsCard
-				title='Historique des Harvests'
-				events={harvestEvents}
-				loading={loadingHarvestEvents}
-			/>
-			<RebalanceEventLogsCard
-				title='Historique des Rebalances'
-				events={rebalanceEvents}
-				loading={loadingRebalanceEvents}
-			/>
 		</div>
 	);
 }

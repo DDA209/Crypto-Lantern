@@ -25,18 +25,17 @@ export function LanguageSwitcher({ style }: { style?: string }) {
 		>
 			<button
 				onClick={() => changeLanguage('fr')}
-				className={`hover:text-[#3979d6] transition-colors ${i18n.resolvedLanguage?.startsWith('fr') ? 'text-[#3979d6] font-bold' : 'text-gray-500 dark:text-gray-400'}`}
+				className={`hover:text-[#28b092] transition-colors ${i18n.resolvedLanguage?.startsWith('fr') ? 'text-[#28b092] font-bold' : 'text-gray-500 dark:text-gray-400'}`}
 			>
 				FR
 			</button>
 			<span className='text-gray-300 dark:text-gray-600'>|</span>
 			<button
 				onClick={() => changeLanguage('en')}
-				className={`hover:text-[#3979d6] transition-colors ${i18n.resolvedLanguage?.startsWith('en') ? 'text-[#3979d6] font-bold' : 'text-gray-500 dark:text-gray-400'}`}
+				className={`hover:text-[#28b092] transition-colors ${i18n.resolvedLanguage?.startsWith('en') ? 'text-[#28b092] font-bold' : 'text-gray-500 dark:text-gray-400'}`}
 			>
 				EN
 			</button>
 		</div>
 	);
 }
-

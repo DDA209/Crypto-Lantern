@@ -55,19 +55,22 @@ export default buildModule('VaultPrudentGlUSDPModule', (m) => {
 		},
 	);
 
-	console.log(
-		'======================================================================',
-	);
-	console.log('Local values to copy to the Front-End (.env.local) :');
-	console.log(`NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA=${USDC_SEPOLIA}`);
-	// console.log(`NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA=${vault}`);
-	// console.log(`NEXT_PUBLIC_BLOCK_NUMBER_SEPOLIA=${deployBlockNumber}`);
-	console.log(
-		'======================================================================',
-	);
+	// 5. Deposit and burning first USDCs to prevent
+	const usdc = m.contractAt('IERC20', USDC_SEPOLIA);
+
+	const initialDepositAmount = 10_000_000n; // 10 USDC (avec 6 décimales)
+	const deadAddress = '0x000000000000000000000000000000000000dEaD';
+
+	const approveCall = m.call(usdc, 'approve', [vault, initialDepositAmount], {
+		id: 'ApproveUSDCForDeadShares',
+	});
+
+	m.call(vault, 'deposit', [initialDepositAmount, deadAddress], {
+		id: 'MintDeadShares',
+		after: [approveCall],
+	});
 
 	return { vault, aaveAdapter };
 });
 
 // npx hardhat ignition deploy ignition/modules/deploy-sepolia.ts --network sepolia --verify --reset
-// 54.64225 SepoliaETH - 54.62321 = 0.01904 SepoliaETH

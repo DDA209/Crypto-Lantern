@@ -1,216 +1,337 @@
 'use client';
 
-import { useReadContracts, useChainId } from 'wagmi';
-import { formatUnits, formatEther, type Abi } from 'viem';
+import { useEffect, useState } from 'react';
+import { useChainId, usePublicClient, useWriteContract } from 'wagmi';
+import { Address, parseUnits, BaseError } from 'viem';
 import { useLantern } from '@/context/LanternContext';
 import VaultPrudentGlUSDPABI from '@/context/VaultPrudentGlUSDP.json';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Skeleton } from '@/components/ui/skeleton'; // Si tu as ce composant shadcn
 import {
-	Activity,
+	Card,
+	CardContent,
+	CardHeader,
+	CardTitle,
+	CardDescription,
+} from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { toast } from 'sonner';
+import {
+	Loader2,
+	Gavel,
+	RefreshCcw,
+	Settings,
 	ShieldCheck,
-	Clock,
-	Coins,
-	Landmark,
-	Percent,
-	ArrowUpRight,
+	CheckCircle2,
+	ShieldAlert,
 } from 'lucide-react';
+import { RebalanceMovementEvent } from '@/data/types/MovementEvent';
+import { NETWORK_CONFIG } from '@/config/NetworkConfig';
+import { publicClient as client } from '@/lib/client';
+import { parseAbiItem } from 'viem';
+import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';
 
-export default function VaultDashboard() {
-	const { vaultPrudentGlUSDPAddress, isConnected } = useLantern();
+export default function AdminDAO() {
+	const { isDao, isNewDao, vaultPrudentGlUSDPAddress } = useLantern();
+	const { writeContractAsync } = useWriteContract();
+	const [isExecuting, setIsExecuting] = useState(false);
+	const publicClient = usePublicClient();
 	const chainId = useChainId();
 
-	// Regroupement des appels pour la performance
-	const { data, isLoading, isError } = useReadContracts({
-		contracts: [
-			{
-				address: vaultPrudentGlUSDPAddress,
-				abi: VaultPrudentGlUSDPABI as Abi,
-				functionName: 'totalAssets',
-			},
-			{
-				address: vaultPrudentGlUSDPAddress,
-				abi: VaultPrudentGlUSDPABI as Abi,
-				functionName: 'totalSupply',
-			},
-			{
-				address: vaultPrudentGlUSDPAddress,
-				abi: VaultPrudentGlUSDPABI as Abi,
-				functionName: 'bufferBIPS',
-			},
-			{
-				address: vaultPrudentGlUSDPAddress,
-				abi: VaultPrudentGlUSDPABI as Abi,
-				functionName: 'deploymentTimestamp',
-			},
-			{
-				address: vaultPrudentGlUSDPAddress,
-				abi: VaultPrudentGlUSDPABI as Abi,
-				functionName: 'lastHarvestTimestamp',
-			},
-			{
-				address: vaultPrudentGlUSDPAddress,
-				abi: VaultPrudentGlUSDPABI as Abi,
-				functionName: 'convertToAssets',
-				args: [BigInt(10 ** 6)], // Prix pour 1 part (avec 6 décimales)
-			},
-		],
-		query: {
-			enabled: isConnected && !!vaultPrudentGlUSDPAddress,
-			refetchInterval: 30000, // Rafraîchir toutes les 30 secondes
-		},
-	});
+	// States pour les inputs
+	const [newDaoAddress, setNewDaoAddress] = useState('');
+	const [newFees, setNewFees] = useState('');
+	const [newBuffer, setNewBuffer] = useState('');
+	const [rebalanceEvents, setRebalanceEvents] = useState<
+		RebalanceMovementEvent[]
+	>([]);
 
-	if (isLoading) return <DashboardSkeleton />;
-	if (isError || !data)
-		return <div>Erreur lors de la récupération des données du Vault.</div>;
+	const [loadingRebalanceEvents, setLoadingRebalanceEvents] = useState(false);
 
-	// Extraction des résultats (dans l'ordre des appels ci-dessus)
-	const [
-		totalAssets,
-		totalSupply,
-		bufferBIPS,
-		deploymentDate,
-		lastHarvest,
-		pricePerShare,
-	] = data;
+	const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
 
-	// Helper pour formater les dates
-	const formatDate = (ts: any) => {
-		if (!ts.result) return 'Jamais';
-		return new Date(Number(ts.result) * 1000).toLocaleString();
+	const getRebalanceEvents = async () => {
+		if (!chainId || !vaultPrudentGlUSDPAddress) return;
+		setLoadingRebalanceEvents(true);
+
+		try {
+			const rebalanceLogs = await client(chainId).getLogs({
+				address: vaultPrudentGlUSDPAddress,
+				event: parseAbiItem(
+					'event Rebalance(bool force, uint256 currentTotalAssets, uint256 newBuffer, uint256 investedAmout, uint256 reinvestedAmout)',
+				),
+				fromBlock,
+				toBlock: 'latest',
+			});
+
+			const rebalanceEvents: RebalanceMovementEvent[] = rebalanceLogs.map(
+				(log) => {
+					return {
+						force: log.args.force ?? false,
+						newBuffer: log.args.newBuffer ?? 0n, // Buffer
+						currentTotalAssets: log.args.currentTotalAssets ?? 0n, // TVL
+						reinvestedAmout: log.args.reinvestedAmout ?? 0n,
+						blockNumber: Number(log.blockNumber),
+						transactionHash: log.transactionHash,
+					};
+				},
+			);
+			setRebalanceEvents(
+				rebalanceEvents.sort((a, b) => b.blockNumber - a.blockNumber),
+			);
+		} catch (error) {
+			console.error(error);
+			setRebalanceEvents([]);
+		} finally {
+			setLoadingRebalanceEvents(false);
+		}
+	};
+	// Fonction générique pour les transactions
+	const handleTx = async (
+		functionName: string,
+		args: (string | number | bigint | Address)[],
+	) => {
+		setIsExecuting(true);
+		try {
+			await writeContractAsync({
+				address: vaultPrudentGlUSDPAddress as Address,
+				abi: VaultPrudentGlUSDPABI,
+				functionName,
+				args,
+			});
+			toast.success(`Transaction envoyée : ${functionName}`);
+		} catch (error) {
+			const err = error as BaseError;
+			toast.error(`Erreur : ${err.shortMessage || err.message}`);
+		} finally {
+			setIsExecuting(false);
+		}
 	};
 
+	const handleConfirmDaoAddress = async () => {
+		if (!publicClient || !vaultPrudentGlUSDPAddress) return;
+		setIsExecuting(true);
+
+		try {
+			toast.loading('Signature de la confirmation...', {
+				id: 'admin-toast',
+			});
+
+			const hash = await writeContractAsync({
+				address: vaultPrudentGlUSDPAddress,
+				abi: VaultPrudentGlUSDPABI,
+				functionName: 'confirmNewDAOAddress',
+			});
+
+			toast.loading('Transfert des droits en cours...', {
+				id: 'admin-toast',
+			});
+			await publicClient.waitForTransactionReceipt({ hash });
+
+			toast.success(
+				'Félicitations ! Vous êtes désormais la nouvelle Team officielle.',
+				{ id: 'admin-toast' },
+			);
+		} catch (error) {
+			console.error(error);
+			toast.error('Échec de la confirmation.', { id: 'admin-toast' });
+		} finally {
+			setIsExecuting(false);
+		}
+	};
+
+	useEffect(() => {
+		getRebalanceEvents();
+	}, []);
+
+	// --- AFFICHAGE : NON AUTORISÉ ---
+	if (!isDao && !isNewDao) {
+		return (
+			<div className='flex flex-col items-center max-w-4xl mx-auto px-4 space-y-8 py-20 text-center'>
+				<ShieldAlert className='h-16 w-16 text-red-500/50 mb-4' />
+				<h2 className='text-2xl font-bold text-navy mb-2'>
+					Accès Restreint
+				</h2>
+				<p className='text-navy/60'>
+					Vous n&apos;avez pas les droits d&apos;administration Team
+					pour consulter cette page.
+				</p>
+			</div>
+		);
+	}
+
 	return (
-		<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-			{/* --- SECTION METRIQUES FINANCIERES --- */}
-			<Card className='border-none shadow-md bg-white'>
-				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-					<CardTitle className='text-sm font-medium'>
-						Total Assets (AUM)
-					</CardTitle>
-					<Landmark className='h-4 w-4 text-[#28B092]' />
-				</CardHeader>
-				<CardContent>
-					<div className='text-2xl font-bold'>
-						{totalAssets.result
-							? formatUnits(totalAssets.result as bigint, 6)
-							: '0'}{' '}
-						USDC
-					</div>
-					<p className='text-xs text-muted-foreground'>
-						Total des fonds sous gestion
-					</p>
-				</CardContent>
-			</Card>
+		<div className='max-w-4xl mx-auto py-10 px-4 space-y-8'>
+			<h1 className='text-3xl font-bold text-navy flex items-center gap-3'>
+				<Gavel className='h-8 w-8  text-[#28B092]' /> Console de
+				Gouvernance DAO
+			</h1>
 
-			<Card className='border-none shadow-md bg-white'>
-				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-					<CardTitle className='text-sm font-medium'>
-						Total Supply
-					</CardTitle>
-					<Coins className='h-4 w-4 text-blue-500' />
-				</CardHeader>
-				<CardContent>
-					<div className='text-2xl font-bold'>
-						{totalSupply.result
-							? formatUnits(totalSupply.result as bigint, 6)
-							: '0'}{' '}
-						glUSD-P
-					</div>
-					<p className='text-xs text-muted-foreground'>
-						Parts totales émises
-					</p>
-				</CardContent>
-			</Card>
+			{/* PANNEAU DE LA NOUVELLE DAO EN ATTENTE DE CONFIRMATION */}
+			{isNewDao && (
+				<Card className='border-amber-200 bg-amber-50 dark:bg-amber-950 shadow-md'>
+					<CardHeader>
+						<CardTitle className='text-amber-800 dark:text-amber-300 flex items-center gap-2'>
+							<ShieldAlert className='h-5 w-5' />
+							Action Requise : Prise de fonction
+						</CardTitle>
+						<CardDescription className='text-amber-700/80 dark:text-amber-200'>
+							L&apos;ancienne DAO vous a désigné comme successeur.
+							Vous devez confirmer pour obtenir vos droits d&apos;
+							<a
+								href='http://'
+								target='_blank'
+								rel='noopener noreferrer'
+							></a>
+							dministration.
+						</CardDescription>
+					</CardHeader>
+					<CardContent>
+						<Button
+							onClick={handleConfirmDaoAddress}
+							disabled={isExecuting}
+							className='bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto'
+						>
+							{isExecuting ? (
+								<Loader2 className='mr-2 h-4 w-4 animate-spin' />
+							) : (
+								<CheckCircle2 className='mr-2 h-4 w-4' />
+							)}
+							Accepter le rôle de DAO
+						</Button>
+					</CardContent>
+				</Card>
+			)}
 
-			<Card className='border-none shadow-md bg-white'>
-				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-					<CardTitle className='text-sm font-medium'>
-						Prix de la part
-					</CardTitle>
-					<ArrowUpRight className='h-4 w-4 text-green-500' />
-				</CardHeader>
-				<CardContent>
-					<div className='text-2xl font-bold'>
-						{pricePerShare.result
-							? formatUnits(pricePerShare.result as bigint, 6)
-							: '1.00'}{' '}
-						USDC
-					</div>
-					<p className='text-xs text-muted-foreground'>
-						Valeur actuelle de 1 glUSD-P
-					</p>
-				</CardContent>
-			</Card>
+			{/* 1. Force Rebalance */}
+			{isDao && (
+				<>
+					<div className='grid md:grid-cols-2 gap-6'>
+						<Card>
+							<CardHeader>
+								<CardTitle className='flex items-center gap-2'>
+									<RefreshCcw className='h-5 w-5' />{' '}
+									Reéquilibrage Forcé
+								</CardTitle>
+								<CardDescription>
+									Retirer des fonds des stratégies vers le
+									buffer
+								</CardDescription>
+							</CardHeader>
+							<CardContent className='space-y-4'>
+								<Button
+									className='w-full'
+									onClick={() =>
+										handleTx('forceRebalance', [])
+									}
+									disabled={isExecuting}
+								>
+									{isExecuting && (
+										<Loader2 className='mr-2 animate-spin' />
+									)}{' '}
+									Exécuter
+								</Button>
+							</CardContent>
+						</Card>
 
-			{/* --- SECTION CONFIGURATION & ETAT --- */}
-			<Card className='border-none shadow-md bg-white'>
-				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-					<CardTitle className='text-sm font-medium'>
-						Liquidité de sécurité (Buffer)
-					</CardTitle>
-					<Percent className='h-4 w-4 text-amber-500' />
-				</CardHeader>
-				<CardContent>
-					<div className='text-2xl font-bold'>
-						{bufferBIPS.result
-							? Number(bufferBIPS.result) / 100
-							: '0'}
-						%
-					</div>
-					<p className='text-xs text-muted-foreground'>
-						Pourcentage conservé hors stratégies
-					</p>
-				</CardContent>
-			</Card>
+						{/* 2. Configuration BIPS */}
+						<Card>
+							<CardHeader>
+								<CardTitle className='flex items-center gap-2'>
+									<Settings className='h-5 w-5' /> Paramètres
+									du Protocole
+								</CardTitle>
+							</CardHeader>
+							<CardContent className='space-y-6'>
+								<div className='flex gap-2'>
+									<Input
+										placeholder='Frais (ex: 5.00 pour 5%)'
+										value={newFees}
+										onChange={(e) =>
+											setNewFees(e.target.value)
+										}
+									/>
+									<Button
+										onClick={() =>
+											handleTx('setFeesBIPS', [
+												Math.ceil(
+													Number(newFees) * 100,
+												),
+											])
+										}
+										disabled={isExecuting}
+									>
+										Maj
+									</Button>
+								</div>
+								<div className='flex gap-2'>
+									<Input
+										placeholder='Buffer (ex: 10.00 pour 10%)'
+										value={newBuffer}
+										onChange={(e) =>
+											setNewBuffer(e.target.value)
+										}
+									/>
+									<Button
+										onClick={() =>
+											handleTx('setLiquidityBufferBIPS', [
+												Math.ceil(
+													Number(newBuffer) * 100,
+												),
+											])
+										}
+										disabled={isExecuting}
+									>
+										Maj
+									</Button>
+								</div>
+							</CardContent>
+						</Card>
 
-			<Card className='border-none shadow-md bg-white'>
-				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-					<CardTitle className='text-sm font-medium'>
-						Dernier Harvest
-					</CardTitle>
-					<Clock className='h-4 w-4 text-purple-500' />
-				</CardHeader>
-				<CardContent>
-					<div className='text-sm font-bold'>
-						{formatDate(lastHarvest)}
+						{/* 3. Transfert de Gouvernance */}
+						<Card className='md:col-span-2'>
+							<CardHeader>
+								<CardTitle className='flex items-center gap-2'>
+									<ShieldCheck className='h-5 w-5' />{' '}
+									Transfert de la DAO
+								</CardTitle>
+							</CardHeader>
+							<CardContent className='flex gap-4'>
+								<Input
+									placeholder='Nouvelle adresse DAO 0x...'
+									className='font-mono'
+									value={newDaoAddress}
+									onChange={(e) =>
+										setNewDaoAddress(e.target.value)
+									}
+								/>
+								<Button
+									variant='outline'
+									onClick={() =>
+										handleTx('setDAOAddress', [
+											newDaoAddress,
+										])
+									}
+								>
+									Proposer
+								</Button>
+								<Button
+									variant='default'
+									onClick={() =>
+										handleTx('confirmDaoAddress', [])
+									}
+								>
+									Confirmer (Accepter)
+								</Button>
+							</CardContent>
+						</Card>
 					</div>
-					<p className='text-xs text-muted-foreground'>
-						Dernière récolte de rendements
-					</p>
-				</CardContent>
-			</Card>
-
-			<Card className='border-none shadow-md bg-white'>
-				<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-					<CardTitle className='text-sm font-medium'>
-						Date de déploiement
-					</CardTitle>
-					<ShieldCheck className='h-4 w-4 text-navy' />
-				</CardHeader>
-				<CardContent>
-					<div className='text-sm font-bold'>
-						{formatDate(deploymentDate)}
-					</div>
-					<p className='text-xs text-muted-foreground'>
-						Initialisation du contrat
-					</p>
-				</CardContent>
-			</Card>
-		</div>
-	);
-}
-
-function DashboardSkeleton() {
-	return (
-		<div className='grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-			{[1, 2, 3, 4, 5, 6].map((i) => (
-				<Card
-					key={i}
-					className='h-32 shadow-sm animate-pulse bg-gray-100'
-				/>
-			))}
+					<RebalanceEventLogsCard
+						title='Historique des Rebalances'
+						events={rebalanceEvents}
+						loading={loadingRebalanceEvents}
+					/>
+				</>
+			)}
 		</div>
 	);
 }

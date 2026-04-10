@@ -72,7 +72,7 @@ export const EventLogsCard = ({
 						<TableRow key={i}>
 							<TableCell>{event.type}</TableCell>
 							<TableCell>
-								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'Dépôt' ? 'glUSD' : 'USDC'}`}
+								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'Dépôt' ? 'USDC' : 'glUSD-P'}`}
 							</TableCell>
 							<TableCell>
 								<a

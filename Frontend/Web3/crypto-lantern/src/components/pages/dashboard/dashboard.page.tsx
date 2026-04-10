@@ -16,10 +16,61 @@ import {
 	ArrowUpRight,
 	Shield,
 } from 'lucide-react';
+import { publicClient as client } from '@/lib/client';
+import { parseAbiItem } from 'viem';
+import { NETWORK_CONFIG } from '@/config/NetworkConfig';
+import { useEffect, useState } from 'react';
 
 export default function VaultDashboard() {
 	const { vaultPrudentGlUSDPAddress, isConnected } = useLantern();
 	const chainId = useChainId();
+
+	const [bufferStats, setBufferStats] = useState({ amount: 0, bips: 0 });
+	const [isLoadingStats, setIsLoadingStats] = useState(true);
+	const fetchBufferStats = async () => {
+		setIsLoadingStats(true);
+		try {
+			if (!chainId || !vaultPrudentGlUSDPAddress) return;
+
+			const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
+
+			// Récupération des logs Rebalance
+			const rebalanceLogs = await client(chainId).getLogs({
+				address: vaultPrudentGlUSDPAddress,
+				event: parseAbiItem(
+					'event Rebalance(bool force, uint256 currentTotalAssets, uint256 newBuffer, uint256 divestedAmout, uint256 reinvestedAmout)',
+				),
+				fromBlock,
+				toBlock: 'latest',
+			});
+
+			const tvl = (await client(chainId).readContract({
+				address: vaultPrudentGlUSDPAddress,
+				abi: VaultPrudentGlUSDPABI,
+				functionName: 'totalAssets',
+			})) as bigint;
+
+			if (rebalanceLogs.length > 0) {
+				const lastBuffer = rebalanceLogs[rebalanceLogs.length - 1].args
+					.newBuffer as bigint;
+				const actualBips =
+					tvl > 0n ? Number((lastBuffer * 10000n) / tvl) : 0;
+
+				setBufferStats({
+					amount: Number(lastBuffer) / 1e6, // Conversion USDC
+					bips: actualBips,
+				});
+			}
+		} catch (error) {
+			console.error('Erreur stats:', error);
+		} finally {
+			setIsLoadingStats(false);
+		}
+	};
+
+	useEffect(() => {
+		fetchBufferStats();
+	}, [chainId, vaultPrudentGlUSDPAddress]);
 
 	const baseConfig = {
 		address: vaultPrudentGlUSDPAddress,
@@ -30,7 +81,6 @@ export default function VaultDashboard() {
 		contracts: [
 			{ ...baseConfig, functionName: 'totalAssets' },
 			{ ...baseConfig, functionName: 'totalSupply' },
-			{ ...baseConfig, functionName: 'bufferBIPS' },
 			{ ...baseConfig, functionName: 'deploymentTimestamp' },
 			{ ...baseConfig, functionName: 'lastHarvestTimestamp' },
 			{
@@ -42,7 +92,6 @@ export default function VaultDashboard() {
 			{ ...baseConfig, functionName: 'teamAddress' },
 			{ ...baseConfig, functionName: 'newDaoAddress' },
 			{ ...baseConfig, functionName: 'newTeamAddress' },
-			{ ...baseConfig, functionName: 'owner' },
 		],
 		query: {
 			enabled: isConnected && !!vaultPrudentGlUSDPAddress,
@@ -58,7 +107,6 @@ export default function VaultDashboard() {
 	const [
 		totalAssets,
 		totalSupply,
-		bufferBIPS,
 		deploymentDate,
 		lastHarvest,
 		pricePerShare,
@@ -66,7 +114,6 @@ export default function VaultDashboard() {
 		team,
 		newDao,
 		newTeam,
-		owner,
 	] = data;
 
 	// Helper pour formater les dates
@@ -115,7 +162,7 @@ export default function VaultDashboard() {
 		<>
 			<div className='max-w-4xl mx-auto py-10 px-4 space-y-0 grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
 				{/* --- SECTION METRIQUES FINANCIERES --- */}
-				<Card className='border-none shadow-md bg-white'>
+				<Card className='border-none shadow-md '>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
 							Total Assets (AUM)
@@ -135,7 +182,7 @@ export default function VaultDashboard() {
 					</CardContent>
 				</Card>
 
-				<Card className='border-none shadow-md bg-white'>
+				<Card className='border-none shadow-md '>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
 							Total Supply
@@ -155,7 +202,7 @@ export default function VaultDashboard() {
 					</CardContent>
 				</Card>
 
-				<Card className='border-none shadow-md bg-white'>
+				<Card className='border-none shadow-md '>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
 							Prix de la part
@@ -176,7 +223,7 @@ export default function VaultDashboard() {
 				</Card>
 
 				{/* --- SECTION CONFIGURATION & ETAT --- */}
-				<Card className='border-none shadow-md bg-white'>
+				<Card className='border-none shadow-md '>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
 							Liquidité de sécurité (Buffer)
@@ -184,19 +231,27 @@ export default function VaultDashboard() {
 						<Percent className='h-4 w-4 text-amber-500' />
 					</CardHeader>
 					<CardContent>
-						<div className='text-2xl font-bold'>
-							{bufferBIPS.result
-								? Number(bufferBIPS.result) / 100
-								: '100'}
-							%
-						</div>
+						{isLoadingStats ? (
+							<Skeleton />
+						) : (
+							<div className='text-2xl font-bold'>
+								{Math.ceil(bufferStats.bips) / 100}%
+							</div>
+						)}
+						{isLoadingStats ? (
+							<Skeleton />
+						) : (
+							<div className='text-2xl font-bold'>
+								{bufferStats.amount} USDC
+							</div>
+						)}
 						<p className='text-xs text-muted-foreground'>
 							Pourcentage conservé hors stratégies
 						</p>
 					</CardContent>
 				</Card>
 
-				<Card className='border-none shadow-md bg-white'>
+				<Card className='border-none shadow-md '>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
 							Dernier Harvest
@@ -213,7 +268,7 @@ export default function VaultDashboard() {
 					</CardContent>
 				</Card>
 
-				<Card className='border-none shadow-md bg-white'>
+				<Card className='border-none shadow-md '>
 					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
 						<CardTitle className='text-sm font-medium'>
 							Date de déploiement
@@ -268,9 +323,13 @@ export default function VaultDashboard() {
 							<span className='text-muted-foreground'>
 								Buffer de sécurité :
 							</span>
-							<span className='font-medium'>
-								{(Number(bufferBIPS.result) || 0) / 100}%
-							</span>
+							{isLoadingStats ? (
+								<Skeleton />
+							) : (
+								<span className='font-medium'>
+									{Math.ceil(bufferStats.bips) / 100}%
+								</span>
+							)}
 						</div>
 					</CardContent>
 				</Card>
@@ -282,16 +341,15 @@ export default function VaultDashboard() {
 						</CardTitle>
 					</CardHeader>
 					<CardContent className='space-y-4'>
-						<div className='bg-gray-50 p-3 rounded-lg'>
+						<div className='bg-gray-100 dark:bg-gray-900 p-3 rounded-lg'>
 							<p className='text-[10px] uppercase font-bold text-gray-400 mb-2'>
 								Propriétaire & DAO
 							</p>
-							{renderAddress('Contract Owner', owner)}
 							{renderAddress('DAO Actuelle', dao)}
 							{renderAddress('Nouvelle DAO (En attente)', newDao)}
 						</div>
 
-						<div className='bg-gray-50 p-3 rounded-lg'>
+						<div className='bg-gray-100 dark:bg-gray-900 p-3 rounded-lg'>
 							<p className='text-[10px] uppercase font-bold text-gray-400 mb-2'>
 								Gestion Technique (Team)
 							</p>

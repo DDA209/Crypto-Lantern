@@ -20,9 +20,8 @@ export type HarvestMovementEvent = {
 
 export type RebalanceMovementEvent = {
 	force: boolean | undefined;
-	currentTotalAssets: bigint | undefined;
 	newBuffer: bigint | undefined;
-	divestedAmout: bigint | undefined;
+	currentTotalAssets: bigint | undefined;
 	reinvestedAmout: bigint | undefined;
 	blockNumber: number;
 	transactionHash: `0x${string}`;

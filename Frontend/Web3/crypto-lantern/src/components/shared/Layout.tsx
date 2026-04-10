@@ -28,7 +28,7 @@ const Layout = ({ children }: { children: React.ReactNode }) => {
 		<div className='min-h-screen flex flex-col'>
 			<LanternProvider>
 				{isConnected && <Header />}
-				<main className='flex-1 flex p-4 mx-auto w-full'>
+				<main className='flex-1 flex p-4 mx-auto w-full '>
 					{children}
 				</main>
 				{isConnected && <Footer />}

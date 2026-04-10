@@ -20,6 +20,7 @@ const LanternContext = createContext<LanternContextType>({
 const getContractsAddress = (chainId?: number) => {
 	switch (chainId) {
 		case 1:
+			console.warn('MAINNET', chainId);
 			return {
 				vaultPrudentGlUSDPAddress: process.env
 					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_MAINNET as Address,
@@ -27,6 +28,7 @@ const getContractsAddress = (chainId?: number) => {
 					.NEXT_PUBLIC_USDC_ADDRESS_MAINNET as Address,
 			};
 		case 11155111:
+			console.warn('SEPOLIA', chainId);
 			return {
 				vaultPrudentGlUSDPAddress: process.env
 					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA as Address,
@@ -34,7 +36,9 @@ const getContractsAddress = (chainId?: number) => {
 					.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA as Address,
 			};
 		case 31337:
+			console.warn('HARDHAT', chainId);
 		default:
+			console.warn('ANOTHER CHAIN', chainId);
 			return {
 				vaultPrudentGlUSDPAddress: process.env
 					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_HARDHAT as Address,

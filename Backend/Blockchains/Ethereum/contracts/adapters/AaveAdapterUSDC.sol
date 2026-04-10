@@ -78,6 +78,4 @@ contract AaveAdapterUSDC is IAdapter, ERC165{
 
         emit Divest(msg.sender, usdcAmount);
     }
-
-    receive() external payable{ emit DepositReceived(msg.sender); }
 }
