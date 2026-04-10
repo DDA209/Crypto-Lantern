@@ -40,8 +40,6 @@ export const MovementCard = ({
 	chainId,
 	profiles,
 	balance,
-	globalAPY,
-	userAPY,
 	assetSymbol,
 	shareSymbol,
 	vaultAddress,
@@ -62,13 +60,7 @@ export const MovementCard = ({
 	const { t } = useTranslation();
 	const { address } = useAccount();
 	const { theme } = useTheme();
-	const {
-		data: hash,
-		error,
-		isPending,
-		writeContract,
-		reset,
-	} = useWriteContract();
+	const { data: hash, error, reset } = useWriteContract();
 
 	const {
 		isLoading: isConfirming,
@@ -428,7 +420,7 @@ export const MovementCard = ({
 											: 'border-lgrey bg-white/50 text-navy/70 hover:border-navy/20'
 									}`}
 								>
-									<span className='text-base flex-shrink-0'>
+									<span className='text-base shrink-0'>
 										{profile.icon}
 									</span>
 									<div className='min-w-0'>
