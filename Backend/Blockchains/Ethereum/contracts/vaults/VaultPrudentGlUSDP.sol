@@ -30,6 +30,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
     /* Events A-Z sorted*/
     event DAOAddressChangedConfirmed(address oldDAOAddress, address newDAOAddress);
+    event DepositReceived(address sender, uint256 amount);
     event FeesBIPSChanged(uint16 oldFeesBIPS, uint16 newFeesBIPS);
     event ForceDivest(uint256 amount, uint256 totalAmountToDivest, uint256 remainingToDivest);
     event Harvest(uint256 yield, uint256 fees, uint256 sharesToMint, uint256 totalAssets);
@@ -60,6 +61,10 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /// @dev The amount of USDC kept in the vault to absorb impermanent loss, it represent a percentage of deposit TVL
     /// @dev It's rebalanced with harvest
     uint16 public liquidityBufferBIPS;
+
+    /// @notice Deployment timestamp
+    /// @dev The timestamp of the deployment
+    uint256 public deploymentTimestamp;
 
     /// @notice DAO address
     /// @dev The address of the DAO that manages the vault
@@ -119,6 +124,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         teamAddress = _teamAddress;
         feesBIPS = _feesBIPS;
         liquidityBufferBIPS = _liquidityBufferBIPS;
+        deploymentTimestamp = block.timestamp;
     }
 
     /* View functions */
@@ -147,7 +153,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     }
 
     /* Team functions */
-
+        
     /// @notice Sets the Team address
     /// @param _TeamAddress The address of the Team
     /// @dev The address of the Team that manages the vault
@@ -172,7 +178,6 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
         emit TeamAddressChangedConfirmed(oldTeamAddress, msg.sender);
     }
-
 
     /// @notice Harvests the yield from the adapters and mints shares to the DAO
     /// @dev The yield is calculated as the difference between the current total assets and the last total assets
@@ -416,4 +421,6 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         target = (total * bips) / 10000;
         return target;
     }
+
+    receive() external payable{ emit DepositReceived(msg.sender, msg.value); }
 }

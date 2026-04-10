@@ -19,7 +19,7 @@ const prodAddresses = {
 console.log('▶️ Start deploying local mainnet fork...\n');
 
 // 1. Local accounts
-const [owner, dao] = await ethers.getSigners();
+const [owner, dao, team] = await ethers.getSigners();
 
 // 2. Whale account
 await ethers.getImpersonatedSigner(prodAddresses.whale);
@@ -34,6 +34,7 @@ try {
 	vault = await ethers.deployContract('VaultPrudentGlUSDP', [
 		prodAddresses.usdc,
 		dao.address,
+		team.address,
 		500n,
 		1000n,
 	]);
@@ -79,14 +80,19 @@ try {
 }
 
 console.log('\n🟢🟢🟢 Local deployment completed');
-console.table({ owner: owner.address, dao: dao.address, whale: whale.address });
+console.table({
+	owner: owner.address,
+	dao: dao.address,
+	team: team.address,
+	whale: whale.address,
+});
 console.log(
 	'======================================================================',
 );
 console.log('Local values to copy to the Front-End (.env.local) :');
-console.log(`NEXT_PUBLIC_USDC_ADDRESS=${prodAddresses.usdc}`);
-console.log(`NEXT_PUBLIC_VAULT_ADDRESS=${vault.target}`);
-console.log(`NEXT_PUBLIC_BLOCK_NUMBER=${deployBlockNumber}`);
+console.log(`NEXT_PUBLIC_USDC_ADDRESS_HARDHAT=${prodAddresses.usdc}`);
+console.log(`NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_HARDHAT=${vault.target}`);
+console.log(`NEXT_PUBLIC_BLOCK_NUMBER_HARDHAT=${deployBlockNumber}`);
 console.log(
 	'======================================================================',
 );
@@ -94,4 +100,3 @@ console.log(
 process.exit(0);
 
 // npx hardhat run scripts/deploy-fork.ts --network hardhatMainnetFork
-

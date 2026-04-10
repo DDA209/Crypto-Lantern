@@ -7,6 +7,7 @@ const AAVE_POOL_SEPOLIA = '0x6Ae43d3271ff6888e7Fc43Fd7321a503ff738951';
 
 // DAO address
 const DAO_ADDRESS = '0x97b3b90a0d8B7fB3194a156980c6cA2FdBBF7EAe';
+const TEAM_ADDRESS = '0x97b3b90a0d8B7fB3194a156980c6cA2FdBBF7EAe';
 
 export default buildModule('VaultPrudentGlUSDPModule', (m) => {
 	console.log('▶️ Start deploying Sepolia...');
@@ -19,9 +20,12 @@ export default buildModule('VaultPrudentGlUSDPModule', (m) => {
 	const vault = m.contract('VaultPrudentGlUSDP', [
 		USDC_SEPOLIA,
 		DAO_ADDRESS,
+		TEAM_ADDRESS,
 		feesBIPS,
 		bufferBIPS,
 	]);
+	// const deployBlockNumber = m.staticCall(vault, 'blockNumber', []);
+	// console.log(`NEXT_PUBLIC_BLOCK_NUMBER_SEPOLIA=${deployBlockNumber}`);
 
 	// 3. Deploy AaveAdapter
 	// Batch #2
@@ -51,9 +55,19 @@ export default buildModule('VaultPrudentGlUSDPModule', (m) => {
 		},
 	);
 
+	console.log(
+		'======================================================================',
+	);
+	console.log('Local values to copy to the Front-End (.env.local) :');
+	console.log(`NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA=${USDC_SEPOLIA}`);
+	// console.log(`NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA=${vault}`);
+	// console.log(`NEXT_PUBLIC_BLOCK_NUMBER_SEPOLIA=${deployBlockNumber}`);
+	console.log(
+		'======================================================================',
+	);
+
 	return { vault, aaveAdapter };
 });
 
 // npx hardhat ignition deploy ignition/modules/deploy-sepolia.ts --network sepolia --verify --reset
 // 54.64225 SepoliaETH - 54.62321 = 0.01904 SepoliaETH
-

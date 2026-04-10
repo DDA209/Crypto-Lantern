@@ -26,6 +26,7 @@ export default async function RootLayout({
 		<html
 			lang='fr'
 			suppressHydrationWarning
+			translate='no'
 		>
 			<body className={inter.className}>
 				<ThemeProvider
@@ -44,4 +45,3 @@ export default async function RootLayout({
 		</html>
 	);
 }
-

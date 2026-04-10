@@ -1,5 +1,5 @@
 import Link from 'next/link';
-import ConnectButton from '../ui/buttons/ConnectButton';
+import ConnectButton from './buttons/ConnectButton';
 import { appName } from '@/config';
 import Image from 'next/image';
 import { useLantern } from '@/context/LanternContext';
@@ -9,7 +9,7 @@ import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
 import { useTheme } from 'next-themes';
 
 const Header = () => {
-	const { isDao } = useLantern();
+	const { isTeam, isNewTeam } = useLantern();
 	const { t } = useTranslation();
 	const { theme } = useTheme();
 
@@ -33,11 +33,24 @@ const Header = () => {
 					</Link>
 					<nav className='hidden md:flex items-center gap-5'>
 						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#3979d6] dark:hover:text-[#3979d6]'>
-							<Link href='/'>{t('header.invest')}</Link>
+							<Link
+								suppressHydrationWarning
+								href='/'
+							>
+								{t('header.home')}
+							</Link>
 						</button>
-						{isDao ? (
+						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#3979d6] dark:hover:text-[#3979d6]'>
+							<Link
+								suppressHydrationWarning
+								href='/invest'
+							>
+								{t('header.invest')}
+							</Link>
+						</button>
+						{isTeam || isNewTeam ? (
 							<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#3979d6] dark:hover:text-[#3979d6]'>
-								<Link href='/admin'>{t('header.admin')}</Link>
+								<Link href='/team'>{t('header.team')}</Link>
 							</button>
 						) : null}
 					</nav>
@@ -53,4 +66,3 @@ const Header = () => {
 };
 
 export default Header;
-

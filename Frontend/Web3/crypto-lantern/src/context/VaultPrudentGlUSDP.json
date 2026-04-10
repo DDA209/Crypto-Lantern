@@ -11,6 +11,11 @@
 				"name": "_daoAddress",
 				"type": "address"
 			},
+			{
+				"internalType": "address",
+				"name": "_teamAddress",
+				"type": "address"
+			},
 			{ "internalType": "uint16", "name": "_feesBIPS", "type": "uint16" },
 			{
 				"internalType": "uint16",
@@ -167,6 +172,13 @@
 		"name": "NotADao",
 		"type": "error"
 	},
+	{
+		"inputs": [
+			{ "internalType": "address", "name": "sender", "type": "address" }
+		],
+		"name": "NotATeam",
+		"type": "error"
+	},
 	{ "inputs": [], "name": "NotAmountZero", "type": "error" },
 	{ "inputs": [], "name": "ReentrancyGuardReentrantCall", "type": "error" },
 	{
@@ -249,6 +261,25 @@
 			}
 		],
 		"name": "Deposit",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "sender",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "uint256",
+				"name": "amount",
+				"type": "uint256"
+			}
+		],
+		"name": "DepositReceived",
 		"type": "event"
 	},
 	{
@@ -369,6 +400,25 @@
 		"inputs": [
 			{
 				"indexed": false,
+				"internalType": "address",
+				"name": "oldTeamAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "newTeamAddress",
+				"type": "address"
+			}
+		],
+		"name": "NewTeamAddressSetted",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
 				"internalType": "bool",
 				"name": "force",
 				"type": "bool"
@@ -429,6 +479,25 @@
 			}
 		],
 		"name": "StrategiesChanged",
+		"type": "event"
+	},
+	{
+		"anonymous": false,
+		"inputs": [
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "oldTeamAddress",
+				"type": "address"
+			},
+			{
+				"indexed": false,
+				"internalType": "address",
+				"name": "newTeamAddress",
+				"type": "address"
+			}
+		],
+		"name": "TeamAddressChangedConfirmed",
 		"type": "event"
 	},
 	{
@@ -556,6 +625,13 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "confirmNewTeamAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{ "internalType": "uint256", "name": "shares", "type": "uint256" }
 		],
@@ -621,6 +697,15 @@
 		"name": "defineStrategies",
 		"outputs": [],
 		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "deploymentTimestamp",
+		"outputs": [
+			{ "internalType": "uint256", "name": "", "type": "uint256" }
+		],
+		"stateMutability": "view",
 		"type": "function"
 	},
 	{
@@ -762,6 +847,15 @@
 		"type": "function"
 	},
 	{
+		"inputs": [],
+		"name": "newTeamAddress",
+		"outputs": [
+			{ "internalType": "address", "name": "", "type": "address" }
+		],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
 		"inputs": [
 			{ "internalType": "uint256", "name": "assets", "type": "uint256" }
 		],
@@ -859,6 +953,19 @@
 	},
 	{
 		"inputs": [
+			{
+				"internalType": "address",
+				"name": "_TeamAddress",
+				"type": "address"
+			}
+		],
+		"name": "setTeamAddress",
+		"outputs": [],
+		"stateMutability": "nonpayable",
+		"type": "function"
+	},
+	{
+		"inputs": [
 			{ "internalType": "uint256", "name": "", "type": "uint256" }
 		],
 		"name": "strategies",
@@ -882,6 +989,15 @@
 		"inputs": [],
 		"name": "symbol",
 		"outputs": [{ "internalType": "string", "name": "", "type": "string" }],
+		"stateMutability": "view",
+		"type": "function"
+	},
+	{
+		"inputs": [],
+		"name": "teamAddress",
+		"outputs": [
+			{ "internalType": "address", "name": "", "type": "address" }
+		],
 		"stateMutability": "view",
 		"type": "function"
 	},
@@ -948,5 +1064,6 @@
 		],
 		"stateMutability": "nonpayable",
 		"type": "function"
-	}
+	},
+	{ "stateMutability": "payable", "type": "receive" }
 ]

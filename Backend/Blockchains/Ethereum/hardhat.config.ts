@@ -1,7 +1,6 @@
 import hardhatToolboxMochaEthersPlugin from '@nomicfoundation/hardhat-toolbox-mocha-ethers';
 import { configVariable, defineConfig } from 'hardhat/config';
 import '@nomicfoundation/hardhat-verify';
-import { isKeystoreJson } from 'ethers';
 
 export default defineConfig({
 	plugins: [hardhatToolboxMochaEthersPlugin],
