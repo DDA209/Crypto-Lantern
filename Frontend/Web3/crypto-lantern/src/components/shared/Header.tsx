@@ -1,21 +1,23 @@
 import Link from 'next/link';
-import ConnectButton from './buttons/ConnectButton';
+import ConnectButton from '../ui/buttons/ConnectButton';
 import { appName } from '@/config';
 import Image from 'next/image';
 import { useLantern } from '@/context/LanternContext';
 import { useTranslation } from 'react-i18next';
-import { ThemeToggle } from '@/components/ui/ThemeToggle';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import { ThemeToggle } from '@/components/ui/toggles/ThemeToggle';
 import { useTheme } from 'next-themes';
+import { NetworkDevSwitch } from '@/components/ui/toggles/NetworkToggle';
+import { useChainId } from 'wagmi';
 
 const Header = () => {
-	const { isTeam, isNewTeam } = useLantern();
+	const { isTeam, isNewTeam, isDao, isNewDao } = useLantern();
 	const { t } = useTranslation();
 	const { theme } = useTheme();
+	const chainId = useChainId();
 
 	return (
-		<header className='sticky top-0 z-50 bg-white dark:bg-gray-900 transition-shadow duration-300 shadow-sm border-b border-gray-200 dark:border-gray-800'>
-			<div className='max-w-6xl mx-auto px-4'>
+		<header className='sticky top-0 z-50 bg-white dark:bg-gray-900 transition-shadow duration-300 shadow-xs border-b border-gray-100 dark:border-gray-800'>
+			<div className='max-w-7xl mx-auto'>
 				<div className='flex items-center justify-between h-16'>
 					<Link
 						href='/'
@@ -27,12 +29,12 @@ const Header = () => {
 							width={24}
 							height={40}
 						/>
-						<span className='font-bold text-lg tracking-tight text-[#3979d6]'>
+						<span className='font-bold text-lg tracking-tight text-[#28b092]'>
 							{appName}
 						</span>
 					</Link>
 					<nav className='hidden md:flex items-center gap-5'>
-						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#3979d6] dark:hover:text-[#3979d6]'>
+						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'>
 							<Link
 								suppressHydrationWarning
 								href='/'
@@ -40,7 +42,7 @@ const Header = () => {
 								{t('header.home')}
 							</Link>
 						</button>
-						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#3979d6] dark:hover:text-[#3979d6]'>
+						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'>
 							<Link
 								suppressHydrationWarning
 								href='/invest'
@@ -49,14 +51,21 @@ const Header = () => {
 							</Link>
 						</button>
 						{isTeam || isNewTeam ? (
-							<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#3979d6] dark:hover:text-[#3979d6]'>
+							<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'>
 								<Link href='/team'>{t('header.team')}</Link>
+							</button>
+						) : null}
+						{isDao || isNewDao ? (
+							<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'>
+								<Link href='/dao'>{t('header.dao')}</Link>
 							</button>
 						) : null}
 					</nav>
 					<div className='flex items-center gap-2 sm:gap-4'>
 						<ThemeToggle />
-						<LanguageSwitcher />
+						{(chainId === 11155111 || chainId === 31337) && (
+							<NetworkDevSwitch />
+						)}
 						<ConnectButton />
 					</div>
 				</div>

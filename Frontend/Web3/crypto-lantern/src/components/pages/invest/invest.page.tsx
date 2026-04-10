@@ -6,7 +6,6 @@ import {
 	useReadContract,
 	useChainId,
 	useWriteContract,
-	usePublicClient,
 } from 'wagmi';
 import { Address, formatUnits, parseAbiItem, parseUnits, type Abi } from 'viem';
 import { useLantern } from '@/context/LanternContext';
@@ -101,6 +100,7 @@ export default function Invest() {
 				fromBlock,
 				toBlock: 'latest',
 			});
+
 			const combined: MovementEvent[] = [
 				...depositEvents.map((e) => ({
 					address: (e.args.sender?.toString() ?? '') as Address,
@@ -119,7 +119,14 @@ export default function Invest() {
 					type: 'Retrait' as const,
 				})),
 			];
-			setEvents(combined.sort((a, b) => b.blockNumber - a.blockNumber));
+
+			const filteredMovements = combined.filter(
+				(event) => event.address === address,
+			);
+
+			setEvents(
+				filteredMovements.sort((a, b) => b.blockNumber - a.blockNumber),
+			);
 		} catch {
 			setEvents([]);
 		} finally {
@@ -163,7 +170,7 @@ export default function Invest() {
 		refetchShares();
 	}, [refetchUsdc, refetchShares]);
 
-	const mintUSDC = () => {
+	const mintMockUSDC = () => {
 		if (!address || !usdcAddress) {
 			console.error(
 				`Address ${address ? '✅' : '❌'} | Mock USDC Address ${usdcAddress ? '✅' : '❌'}`,
@@ -176,6 +183,27 @@ export default function Invest() {
 		}
 		console.log(
 			`Minting USDC to address ${address} from Mock USDC Address ${usdcAddress}`,
+		);
+		writeContract({
+			address: usdcAddress,
+			abi: MockERC20ABI as Abi,
+			functionName: 'mint',
+			args: [address, parseUnits('1000', 6)],
+		});
+	};
+	const mintTestUSDC = () => {
+		if (!address || !usdcAddress) {
+			console.error(
+				`Address ${address ? '✅' : '❌'} | Test USDC Address ${usdcAddress ? '✅' : '❌'}`,
+			);
+			return;
+		}
+		if (chainId !== 11155111) {
+			console.error(`chainId ${chainId} is not 11155111`);
+			return;
+		}
+		console.log(
+			`Minting USDC to address ${address} from Test USDC Address ${usdcAddress}`,
 		);
 		writeContract({
 			address: usdcAddress,
@@ -197,7 +225,8 @@ export default function Invest() {
 					profiles={RISK_PROFILES}
 					balance={formattedUsdcBalance}
 					globalAPY={calculateVaultAPY('USDC')}
-					onRequestTestTokens={mintUSDC}
+					onRequestMockTokens={mintMockUSDC}
+					onRequestTestTokens={mintTestUSDC}
 					assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
 					shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
 					vaultAddress={vaultPrudentGlUSDPAddress as Address}

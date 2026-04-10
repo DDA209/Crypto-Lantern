@@ -90,9 +90,15 @@ console.log(
 	'======================================================================',
 );
 console.log('Local values to copy to the Front-End (.env.local) :');
-console.log(`NEXT_PUBLIC_USDC_ADDRESS_HARDHAT=${prodAddresses.usdc}`);
-console.log(`NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_HARDHAT=${vault.target}`);
-console.log(`NEXT_PUBLIC_BLOCK_NUMBER_HARDHAT=${deployBlockNumber}`);
+console.log(`NEXT_PUBLIC_USDC_ADDRESS_MAINNET='${prodAddresses.usdc}'`);
+console.log(
+	`NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_MAINNET='${vault.target}'`,
+);
+console.log(
+	`NEXT_PUBLIC_AAVE_ADAPTER_USDC_ADDRESS_MAINNET='${aaveAdapterUSDC.target}'`,
+);
+console.log(`NEXT_PUBLIC_BLOCK_NUMBER_LOCAL_MAINNET=${deployBlockNumber}`);
+console.log(`RPC_URL_MAINNET='https://mainnet.infura.io/v3/------'`);
 console.log(
 	'======================================================================',
 );

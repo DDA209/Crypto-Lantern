@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import AppTitle from '@/components/shared/AppTitle';
-import ConnectButton from '@/components/shared/buttons/ConnectButton';
-import { LanguageSwitcher } from '@/components/ui/LanguageSwitcher';
+import ConnectButton from '@/components/ui/buttons/ConnectButton';
+import { LanguageSwitcher } from '@/components/ui/toggles/LanguageSwitcher';
 import Link from 'next/link';
 
 const NotConnected = () => {

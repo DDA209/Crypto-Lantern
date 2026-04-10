@@ -438,7 +438,7 @@
 			{
 				"indexed": false,
 				"internalType": "uint256",
-				"name": "divestedAmout",
+				"name": "investedAmout",
 				"type": "uint256"
 			},
 			{
@@ -1064,6 +1064,5 @@
 		],
 		"stateMutability": "nonpayable",
 		"type": "function"
-	},
-	{ "stateMutability": "payable", "type": "receive" }
+	}
 ]

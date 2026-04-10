@@ -14,6 +14,7 @@ interface MovementCardProps {
 	vaultAbi: Abi;
 	assetAddress: Address;
 	onAction?: (amount: string, profileId: string) => void;
+	onRequestMockTokens?: () => void;
 	onRequestTestTokens?: () => void;
 	refetch: () => void;
 	getEvents: () => void;
