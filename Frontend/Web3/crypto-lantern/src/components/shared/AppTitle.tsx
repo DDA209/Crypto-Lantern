@@ -21,7 +21,7 @@ const AppTitle = ({
 				alt='Logo'
 				width={fullLogo ? 100 : 30}
 				height={fullLogo ? 100 : 30}
-				className='my-auto dark:invert'
+				className='my-auto'
 			/>
 			{fullLogo ? null : (
 				<h3 className='text-(--primary-color) text-center font-bold text-xl tracking-tight inline-block my-4 ml-2'>
