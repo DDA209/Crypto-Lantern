@@ -34,26 +34,23 @@ Le script de déploiement doit effectuer obligatoirement un premier dépôt verr
 
 ```typescript
 // Extrait de script de déploiement Hardhat (deploy.ts)
-const initialDepositAmount = ethers.parseUnits('10', 6); // 10 USDC
-await usdc.approve(vaultAddress, initialDepositAmount);
+await usdc.approve(vaultAddress, ethers.parseUnits('10', 6));
 await vault.deposit(
-	initialDepositAmount,
+	// 10 USDC (avec 6 décimales), les jetons glUSDC-P équivalents seront détruits
+	ethers.parseUnits('10', 6),
 	'0x000000000000000000000000000000000000dEaD',
 );
 
 // Extrait de script de déploiement Ignition
-const initialDepositAmount = 10_000_000n; // 10 USDC (avec 6 décimales)
-const approveCall = m.call(usdc, 'approve', [vault, initialDepositAmount], {
+const approveCall = m.call(usdc, 'approve', [vault, 10_000_000n], {
 	id: 'ApproveUSDCForDeadShares',
 });
 m.call(
 	vault,
 	'deposit',
-	[initialDepositAmount, '0x000000000000000000000000000000000000dEaD'],
-	{
-		id: 'MintDeadShares',
-		after: [approveCall],
-	},
+	// 10 USDC (avec 6 décimales), les jetons glUSDC-P équivalents seront détruits
+	[10_000_000n, '0x000000000000000000000000000000000000dEaD'],
+	{ id: 'MintDeadShares', after: [approveCall] },
 );
 ```
 
@@ -91,7 +88,7 @@ npx hardhat vars set SEPOLIA_PRIVATE_KEY
 npx hardhat vars set ETHERSCAN_API_KEY
 ```
 
-## 🚀 Déploiement local
+## 🖥️ Déploiement local
 
 Le projet est configuré pour être testé en local et déployé sur le testnet Sepolia pour la soutenance.
 
@@ -106,3 +103,29 @@ npx hardhat run scripts/deploy.ts --network localhost
 npx hardhat run scripts/deploy.ts --network mainnet
 ```
 
+## 🚀 Déploiement sur Sepolia
+
+Le déploiement sur Sepolia se fait en une seule commande :
+
+```
+npx hardhat ignition deploy ignition/modules/deploy-sepolia.ts --network sepolia --verify --reset
+```
+
+Le déploiement a été effectué aux adresses suivantes :
+
+```
+VaultPrudentGlUSDP : 0xab539bCfbCAf4d7e1A1eb3a79Dbaa6eb6E2aA37F
+AaveAdapterUSDC : 0x63854C6147bc1289C4A82878a2EBD51cEddFEe39
+```
+
+Sur Etherscan :
+
+-   🔎 [VaultPrudentGlUSDP](https://sepolia.etherscan.io/address/0xab539bCfbCAf4d7e1A1eb3a79Dbaa6eb6E2aA37F#code)
+-   🔎 [AaveAdapterUSDC](https://sepolia.etherscan.io/address/0x63854C6147bc1289C4A82878a2EBD51cEddFEe39#code)
+
+Les contrats sont vérifiés sur le block explorer Sepolia :
+
+-   ✅ [VaultPrudentGlUSDP](https://sourcify.dev/server/repo-ui/11155111/0xab539bCfbCAf4d7e1A1eb3a79Dbaa6eb6E2aA37F)
+-   ✅ [AaveAdapterUSDC](https://sourcify.dev/server/repo-ui/11155111/0x63854C6147bc1289C4A82878a2EBD51cEddFEe39)
+
+🕵️ [Security Audit](https://solidityscan.com/projects/e71f4082d90cac7d9b62b2ddf1e312b7/a2594fa7c199b305)

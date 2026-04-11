@@ -5,6 +5,7 @@ interface LanternContextType {
 	userAddress: Address | undefined;
 	vaultPrudentGlUSDPAddress: Address | undefined;
 	usdcAddress: Address | undefined;
+	aaveUSDCOwner: Address | undefined;
 	isDao: boolean;
 	isNewDao: boolean;
 	isTeam: boolean;

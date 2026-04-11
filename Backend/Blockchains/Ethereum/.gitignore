@@ -21,6 +21,7 @@
 
 # Environment variables
 .env.local
+local.env
 
 # Achitecture
 /Achitecture

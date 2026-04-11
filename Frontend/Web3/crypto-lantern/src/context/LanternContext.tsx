@@ -11,6 +11,7 @@ const LanternContext = createContext<LanternContextType>({
 	userAddress: undefined,
 	vaultPrudentGlUSDPAddress: undefined,
 	usdcAddress: undefined,
+	aaveUSDCOwner: undefined,
 	isDao: false,
 	isNewDao: false,
 	isTeam: false,
@@ -34,6 +35,8 @@ const getContractsAddress = (chainId?: number) => {
 					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA as Address,
 				usdcAddress: process.env
 					.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA as Address,
+				aaveUSDCOwner: process.env
+					.NEXT_PUBLIC_AAVE_USDC_OWNER_SEPOLIA as Address,
 			};
 		case 31337:
 			console.warn('HARDHAT', chainId);
@@ -54,7 +57,7 @@ export const LanternProvider = ({
 	children: React.ReactNode;
 }) => {
 	const { address: userAddress, isConnected, chainId } = useAccount();
-	const { vaultPrudentGlUSDPAddress, usdcAddress } =
+	const { vaultPrudentGlUSDPAddress, usdcAddress, aaveUSDCOwner } =
 		getContractsAddress(chainId);
 
 	const baseConfig = {
@@ -87,6 +90,7 @@ export const LanternProvider = ({
 				userAddress,
 				vaultPrudentGlUSDPAddress,
 				usdcAddress,
+				aaveUSDCOwner: aaveUSDCOwner,
 				isDao: isConnected && daoAddress === userAddress,
 				isNewDao: isConnected && newDaoAddress === userAddress,
 				isTeam: isConnected && teamAddress === userAddress,

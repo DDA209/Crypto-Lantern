@@ -20,13 +20,17 @@ export function NetworkDevSwitch() {
 	}, [chainId]);
 
 	const handleNetworkChange = (checked: boolean) => {
-		const targetId = checked ? sepolia.id : hardhat.id;
-		setIsSepolia(checked);
+		const targetId = checked ? hardhat.id : sepolia.id;
+		setIsSepolia(!checked);
 		switchChain({ chainId: targetId });
 	};
 
+	if (!(chainId === 11155111 || chainId === 31337)) {
+		return null;
+	}
+
 	return (
-		<div className='flex items-center space-x-4 bg-gray-100 dark:bg-gray-800 p-2 rounded-full border border-white/20 px-4'>
+		<div className='flex items-center space-x-4 bg-gray-100 dark:bg-gray-800 hover:bg-gray-200 dark:hover:bg-gray-700  text-gray-700 dark:text-gray-300 p-2 rounded-full border border-gray/50 px-4'>
 			<div className='flex items-center gap-2'>
 				{isPending ? (
 					<Loader2 className='h-4 w-4 animate-spin text-yellow-400' />
@@ -39,13 +43,13 @@ export function NetworkDevSwitch() {
 					htmlFor='network-mode'
 					className='text-xs font-medium cursor-pointer'
 				>
-					{isSepolia ? 'Sepolia Testnet' : 'Hardhat Local'}
+					{isSepolia ? 'Sepolia' : 'Hardhat'}
 				</Label>
 			</div>
 
 			<Switch
 				id='network-mode'
-				checked={isSepolia}
+				checked={!isSepolia}
 				onCheckedChange={handleNetworkChange}
 				disabled={isPending}
 			/>

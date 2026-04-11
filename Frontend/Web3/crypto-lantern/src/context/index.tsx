@@ -2,15 +2,16 @@
 
 import { wagmiAdapter, projectId, appName } from '@/config';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createAppKit } from '@reown/appkit/react';
+import { createAppKit, ThemeMode, useAppKitTheme } from '@reown/appkit/react';
 import {
 	mainnet,
 	// arbitrum,
 	sepolia,
 	hardhat,
 } from '@reown/appkit/networks';
-import React, { type ReactNode } from 'react';
+import React, { useEffect, type ReactNode } from 'react';
 import { cookieToInitialState, WagmiProvider, type Config } from 'wagmi';
+import { useTheme } from 'next-themes';
 
 // Set up queryClient
 const queryClient = new QueryClient();
@@ -43,7 +44,6 @@ const modal = createAppKit({
 	features: {
 		analytics: true, // Optional - defaults to your Cloud configuration
 	},
-	themeMode: 'light',
 	themeVariables: {
 		'--w3m-font-family': 'Inter, system-ui, sans-serif',
 		'--w3m-accent': '#2ABFAB',
@@ -55,6 +55,19 @@ const modal = createAppKit({
 		'--apkt-z-index': 1000,
 	},
 });
+
+function ThemeSync() {
+	const { resolvedTheme } = useTheme(); // resolvedTheme donne 'light' ou 'dark' (gère le mode système)
+	const { setThemeMode } = useAppKitTheme(); // Le contrôleur de thème d'AppKit
+
+	useEffect(() => {
+		if (resolvedTheme) {
+			setThemeMode(resolvedTheme as 'light' | 'dark');
+		}
+	}, [resolvedTheme, setThemeMode]);
+
+	return null;
+}
 
 function ContextProvider({
 	children,
@@ -74,6 +87,7 @@ function ContextProvider({
 			initialState={initialState}
 		>
 			<QueryClientProvider client={queryClient}>
+				<ThemeSync />
 				{children}
 			</QueryClientProvider>
 		</WagmiProvider>

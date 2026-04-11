@@ -1,6 +1,3 @@
-### 3. À placer dans le frontend : `Frontend/README.md`
-
-````markdown
 # 🏮 DeFi Lantern - Interface Web3 (Frontend)
 
 Ce dossier contient l'application décentralisée (DApp) permettant d'interagir avec les contrats DeFi Lantern. Elle est conçue pour séparer strictement les rôles : Investisseurs, Team (Technique) et DAO (Gouvernance).
@@ -57,5 +54,7 @@ RPC_URL_MAINNET='https://mainnet.infura.io/v3/--------------------------------'
 
 NEXT_PUBLIC_PROJECT_ID='--------------------------------'
 ```
-````
 
+```
+
+```

@@ -13,7 +13,6 @@ import { useAccount } from 'wagmi';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import Image from 'next/image';
 import { toast } from 'sonner';
 import {
 	ArrowDownCircle,
@@ -23,9 +22,9 @@ import {
 	Clock,
 	ArrowUpCircle,
 } from 'lucide-react';
-import { useTheme } from 'next-themes';
 import MovementCardProps from '@/data/interfaces/props/MovementCardProps';
 import { useTranslation } from 'react-i18next';
+import { useTheme } from 'next-themes';
 
 // --- Types ---
 export interface Network {
@@ -50,16 +49,17 @@ export const MovementCard = ({
 	onRequestTestTokens,
 }: MovementCardProps) => {
 	const [amount, setAmount] = useState<string>('');
-	const [mousePos, setMousePos] = useState({ x: 0, y: 0 });
+
 	const [selectedAsset, setSelectedAsset] = useState<string>(assetSymbol);
 	const [selectedProfile, setSelectedProfile] = useState<string>(shareSymbol);
-	const [mounted, setMounted] = useState(false);
+
 	const [showApproveModal, setShowApproveModal] = useState(false);
 	const [isExecuting, setIsExecuting] = useState(false);
 
+	const { theme } = useTheme();
 	const { t } = useTranslation();
 	const { address } = useAccount();
-	const { theme } = useTheme();
+
 	const { data: hash, error, reset } = useWriteContract();
 
 	const {
@@ -212,10 +212,6 @@ export const MovementCard = ({
 	};
 
 	useEffect(() => {
-		setMounted(true);
-	}, []);
-
-	useEffect(() => {
 		if (isConfirmed) {
 			if (needsApproval) {
 				toast(t('movementCard.approbationSuccess'));
@@ -240,54 +236,19 @@ export const MovementCard = ({
 		t,
 	]);
 
-	useEffect(
-		() => {
-			// if (!isCustomCursorActive) return;
-			const handleMouseMove = (e: MouseEvent) => {
-				setMousePos({ x: e.clientX, y: e.clientY });
-			};
-			window.addEventListener('mousemove', handleMouseMove);
-			return () =>
-				window.removeEventListener('mousemove', handleMouseMove);
-		},
-		// [selectedProfile]
-		[],
-	);
-
 	return (
 		<>
-			{/* Effet Curseur Volant (Lantern) */}
-			{mounted && (
-				<>
-					<div
-						className='pointer-events-none fixed z-40 rounded-full'
-						style={{
-							width: '350px',
-							height: '350px',
-							background: `radial-gradient(circle, rgba(255, 215, 100, 0.15) 0%, transparent ${theme === 'light' ? 30 : 65}%)`,
-							backdropFilter: `brightness(${theme === 'light' ? 1.01 : 1.06})`,
-							left: `${mousePos.x - 168}px`,
-							top: `${mousePos.y - 145}px`,
-						}}
-					/>
-					<Image
-						src={`/lantern-logo-${theme ?? 'light'}.svg`}
-						width={30}
-						height={30}
-						alt=''
-						className='pointer-events-none fixed z-30 h-8'
-						style={{
-							borderRadius: '50%',
-							width: '30px',
-							height: '30px',
-							left: `${mousePos.x - 7}px`,
-							top: `${mousePos.y + 17}px`,
-						}}
-					/>
-				</>
-			)}
-
-			<Card className='bg-bg rounded-3xl border-none shadow-xl w-full max-w-md mx-auto'>
+			<Card
+				className='bg-bg rounded-3xl border-none shadow-xl w-full max-w-md mx-auto'
+				style={
+					theme === 'dark'
+						? {
+								boxShadow:
+									'rgba(255, 215, 100, 0.2) 0px 0px 14px 2px',
+							}
+						: {}
+				}
+			>
 				<CardHeader
 					className={`rounded-t-3xl pb-4 border-b border-navy/5 ${mode === 'deposit' ? 'bg-linear-to-r from-[#28B092]/5 to-transparent' : 'bg-linear-to-r from-navy/5 to-transparent'}`}
 				>
@@ -379,7 +340,7 @@ export const MovementCard = ({
 								}
 								className={`flex-1 rounded-2xl border-2 h-12 ${
 									selectedAsset === 'USDC'
-										? 'border-[#28B092] bg-white text-navy'
+										? 'border-[#28B092] bg-white dark:bg-gray-800 text-gray-800 dark:text-white'
 										: 'border-lgrey bg-white/50 text-navy/70'
 								}`}
 								onClick={() => setSelectedAsset(assetSymbol)}
@@ -394,7 +355,7 @@ export const MovementCard = ({
 								>
 									💶 EURC
 								</Button>
-								<span className='absolute -top-2 -right-1 bg-navy/80 text-white text-[10px] font-bold px-2 py-0.5 rounded-full'>
+								<span className='absolute -top-2 -right-1 bg-[#f5a623a0] text-gray-800 dark:text-white text-[10px] font-bold px-2 py-0.5 rounded-full'>
 									{t('movementCard.comingSoon')}
 								</span>
 							</div>

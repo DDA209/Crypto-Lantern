@@ -12,7 +12,7 @@ export const getProfiles = (chainId: number): RiskProfile[] => [
 		assetsAmount: 0,
 		sharesAmount: 0,
 		isActive: true,
-		colorClass: 'bg-green-500',
+		colorClass: 'bg-[#28B09236]',
 		vaultAbi: vaultPrudentGlUSDP as unknown as Abi,
 		vaultAddress: NETWORK_CONFIG[chainId]?.vaultPrudentGlUSDP,
 		assetSymbol: 'USDC',

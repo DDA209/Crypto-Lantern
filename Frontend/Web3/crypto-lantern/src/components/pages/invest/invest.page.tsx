@@ -11,6 +11,7 @@ import { Address, formatUnits, parseAbiItem, parseUnits, type Abi } from 'viem';
 import { useLantern } from '@/context/LanternContext';
 import VaultPrudentGlUSDPABI from '@/context/VaultPrudentGlUSDP.json';
 import MockERC20ABI from '@/context/MockERC20.json';
+import AAVEUSDCOwnerABI from '@/context/AAVEUSDCOwner.json';
 import usdcAbi from '@/context/USDC.json';
 import { MovementCard } from '@/components/shared/cards/movements/MovementCard';
 import { getProfiles } from '@/config/profiles';
@@ -23,7 +24,8 @@ import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard
 export default function Invest() {
 	const { address } = useAccount();
 	const chainId = useChainId();
-	const { vaultPrudentGlUSDPAddress, usdcAddress } = useLantern();
+	const { vaultPrudentGlUSDPAddress, usdcAddress, aaveUSDCOwner } =
+		useLantern();
 
 	const [events, setEvents] = useState<MovementEvent[]>([]);
 	const [loadingEvents, setLoadingEvents] = useState(false);
@@ -192,7 +194,7 @@ export default function Invest() {
 		});
 	};
 	const mintTestUSDC = () => {
-		if (!address || !usdcAddress) {
+		if (!address || !usdcAddress || !aaveUSDCOwner) {
 			console.error(
 				`Address ${address ? '✅' : '❌'} | Test USDC Address ${usdcAddress ? '✅' : '❌'}`,
 			);
@@ -202,14 +204,12 @@ export default function Invest() {
 			console.error(`chainId ${chainId} is not 11155111`);
 			return;
 		}
-		console.log(
-			`Minting USDC to address ${address} from Test USDC Address ${usdcAddress}`,
-		);
+
 		writeContract({
-			address: usdcAddress,
-			abi: MockERC20ABI as Abi,
+			address: aaveUSDCOwner,
+			abi: AAVEUSDCOwnerABI as Abi,
 			functionName: 'mint',
-			args: [address, parseUnits('1000', 6)],
+			args: [usdcAddress, address, parseUnits('1000', 6)],
 		});
 	};
 

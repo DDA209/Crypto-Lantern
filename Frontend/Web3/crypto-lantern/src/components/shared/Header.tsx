@@ -6,14 +6,11 @@ import { useLantern } from '@/context/LanternContext';
 import { useTranslation } from 'react-i18next';
 import { ThemeToggle } from '@/components/ui/toggles/ThemeToggle';
 import { useTheme } from 'next-themes';
-import { NetworkDevSwitch } from '@/components/ui/toggles/NetworkToggle';
-import { useChainId } from 'wagmi';
 
 const Header = () => {
 	const { isTeam, isNewTeam, isDao, isNewDao } = useLantern();
 	const { t } = useTranslation();
 	const { theme } = useTheme();
-	const chainId = useChainId();
 
 	return (
 		<header className='sticky top-0 z-50 bg-white dark:bg-gray-900 transition-shadow duration-300 shadow-xs border-b border-gray-100 dark:border-gray-800'>
@@ -63,9 +60,6 @@ const Header = () => {
 					</nav>
 					<div className='flex items-center gap-2 sm:gap-4'>
 						<ThemeToggle />
-						{(chainId === 11155111 || chainId === 31337) && (
-							<NetworkDevSwitch />
-						)}
 						<ConnectButton />
 					</div>
 				</div>
