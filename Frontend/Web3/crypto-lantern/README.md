@@ -54,7 +54,3 @@ RPC_URL_MAINNET='https://mainnet.infura.io/v3/--------------------------------'
 
 NEXT_PUBLIC_PROJECT_ID='--------------------------------'
 ```
-
-```
-
-```
