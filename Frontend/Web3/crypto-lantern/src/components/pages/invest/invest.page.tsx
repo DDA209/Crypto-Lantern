@@ -214,47 +214,50 @@ export default function Invest() {
 	};
 
 	return (
-		<div className='flex flex-col gap-8 items-center justify-center py-2 max-w-6xl mx-auto px-4'>
-			<div className='flex flex-row gap-8 items-center max-w-6xl'>
-				{/* CARTE DE DÉPÔT */}
-				<MovementCard
-					refetch={refetchAll}
-					getEvents={getEvents}
-					mode='deposit'
-					chainId={chainId}
-					profiles={RISK_PROFILES}
-					balance={formattedUsdcBalance}
-					globalAPY={calculateVaultAPY('USDC')}
-					onRequestMockTokens={mintMockUSDC}
-					onRequestTestTokens={mintTestUSDC}
-					assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
-					shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
-					vaultAddress={vaultPrudentGlUSDPAddress as Address}
-					vaultAbi={VaultPrudentGlUSDPABI as Abi}
-					assetAddress={usdcAddress as Address}
-				/>
+		<div className='grid grid-cols-1 md:grid-cols-2 gap-8 items-start justify-center py-2 max-w-6xl mx-auto px-4'>
+			{/* <div className='flex flex-col gap-8 items-center justify-center py-2 max-w-6xl mx-auto px-4'> */}
+			{/* <div className='flex flex-row gap-8 items-center max-w-6xl'> */}
+			{/* CARTE DE DÉPÔT */}
+			<MovementCard
+				refetch={refetchAll}
+				getEvents={getEvents}
+				mode='deposit'
+				chainId={chainId}
+				profiles={RISK_PROFILES}
+				balance={formattedUsdcBalance}
+				globalAPY={calculateVaultAPY('USDC')}
+				onRequestMockTokens={mintMockUSDC}
+				onRequestTestTokens={mintTestUSDC}
+				assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
+				shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
+				vaultAddress={vaultPrudentGlUSDPAddress as Address}
+				vaultAbi={VaultPrudentGlUSDPABI as Abi}
+				assetAddress={usdcAddress as Address}
+				span={1}
+			/>
 
-				{/* CARTE DE RETRAIT */}
-				<MovementCard
-					refetch={refetchAll}
-					getEvents={getEvents}
-					mode='withdraw'
-					chainId={chainId}
-					profiles={RISK_PROFILES}
-					balance={formattedSharesBalance}
-					// userAPY={calculateUserAPY()}
-					assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
-					shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
-					vaultAddress={vaultPrudentGlUSDPAddress as Address}
-					vaultAbi={VaultPrudentGlUSDPABI as Abi}
-					assetAddress={usdcAddress as Address}
-				/>
-			</div>
+			{/* CARTE DE RETRAIT */}
+			<MovementCard
+				refetch={refetchAll}
+				getEvents={getEvents}
+				mode='withdraw'
+				chainId={chainId}
+				profiles={RISK_PROFILES}
+				balance={formattedSharesBalance}
+				// userAPY={calculateUserAPY()}
+				assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
+				shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
+				vaultAddress={vaultPrudentGlUSDPAddress as Address}
+				vaultAbi={VaultPrudentGlUSDPABI as Abi}
+				assetAddress={usdcAddress as Address}
+				span={1}
+			/>
+			{/* </div> */}
 			<EventLogsCard
 				title='Historique de vos mouvements'
 				events={events}
 				loading={loadingEvents}
-				className='w-full'
+				className='w-full md:col-span-2'
 			/>
 		</div>
 	);

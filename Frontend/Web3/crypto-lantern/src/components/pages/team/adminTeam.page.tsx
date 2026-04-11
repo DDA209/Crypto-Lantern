@@ -150,7 +150,7 @@ export default function AdminTeam() {
 			setTimeout(() => {
 				getHarvestEvents();
 				getRebalanceEvents();
-			}, 2000);
+			}, 30000);
 		} catch (error) {
 			console.error(error);
 			toast.error("Échec de l'exécution du Harvest.", {

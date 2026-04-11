@@ -44,6 +44,7 @@ export const MovementCard = ({
 	vaultAddress,
 	vaultAbi,
 	assetAddress,
+	span,
 	// onAction,
 	onRequestMockTokens,
 	onRequestTestTokens,
@@ -200,7 +201,7 @@ export const MovementCard = ({
 			refetch();
 			refetchAllowance();
 			setAmount('');
-			setTimeout(() => getEvents(), 2000);
+			setTimeout(() => getEvents(), 30000);
 		} catch (error) {
 			console.error(error);
 			toast.error(t('movementCard.transactionFailed'), {
@@ -221,7 +222,7 @@ export const MovementCard = ({
 				toast(t('movementCard.transactionSuccess'));
 				refetch();
 				setTimeout(() => setAmount(''), 0);
-				const timer = setTimeout(() => getEvents(), 2000);
+				const timer = setTimeout(() => getEvents(), 30000);
 				return () => clearTimeout(timer);
 				reset();
 			}
@@ -239,7 +240,7 @@ export const MovementCard = ({
 	return (
 		<>
 			<Card
-				className='bg-white dark:bg-gray-800/10 rounded-3xl border-none shadow-xl w-full max-w-md mx-auto py-0 '
+				className='bg-white dark:bg-gray-800/10 rounded-3xl border-none shadow-xl mx-auto py-0 '
 				style={
 					theme === 'dark'
 						? {
@@ -351,7 +352,7 @@ export const MovementCard = ({
 								<Button
 									disabled
 									variant='outline'
-									className='w-full rounded-2xl border-2 border-dashed border-lgrey bg-gray-50 text-navy/30 h-12'
+									className=' rounded-2xl border-2 border-dashed border-lgrey bg-gray-50 text-navy/30 h-12'
 								>
 									💶 EURC
 								</Button>
@@ -412,7 +413,7 @@ export const MovementCard = ({
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
 								disabled={!activeProfile?.isActive}
-								className='text-lg lw-full bg-white border-2 border-lgrey rounded-xl px-4 py-6 font-bold text-navy placeholder:text-navy/20 focus-visible:ring-0 focus-visible:border-[#28B092] transition-colors pr-23'
+								className='text-lg  bg-white border-2 border-lgrey rounded-xl px-4 py-6 font-bold text-navy placeholder:text-navy/20 focus-visible:ring-0 focus-visible:border-[#28B092] transition-colors pr-23'
 								style={{ fontSize: '1rem' }}
 							/>
 							<div className='absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2'>
@@ -456,7 +457,7 @@ export const MovementCard = ({
 							!amount
 						}
 						onClick={handleInitialClick}
-						className={`w-full rounded-xl py-6 text-lg font-bold ${mode === 'deposit' ? 'bg-[#28B092]/90' : 'bg-orange-600/80'} text-white disabled:opacity-40`}
+						className={` rounded-xl py-6 text-lg font-bold ${mode === 'deposit' ? 'bg-[#28B092]/90' : 'bg-orange-600/80'} text-white disabled:opacity-40`}
 					>
 						{isExecuting ? (
 							<Loader2 className='mr-2 h-5 w-5 animate-spin' />
@@ -468,7 +469,7 @@ export const MovementCard = ({
 			</Card>
 			{showApproveModal && (
 				<div className='fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm'>
-					<div className='bg-white dark:bg-gray-900  p-6 rounded-3xl max-w-sm w-full mx-4 shadow-2xl'>
+					<div className='bg-white dark:bg-gray-900  p-6 rounded-3xl mx-4 shadow-2xl'>
 						<h3 className='text-lg font-bold text-navy mb-2'>
 							Autorisation requise
 						</h3>

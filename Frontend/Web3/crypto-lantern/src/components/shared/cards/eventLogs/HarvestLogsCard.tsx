@@ -52,7 +52,7 @@ export const HarvestEventLogsCard = ({
 						<TableHead>Frais</TableHead>
 						<TableHead>gl-USDP</TableHead>
 						<TableHead>Total investi</TableHead>
-						<TableHead>Hash de la transaction</TableHead>
+						<TableHead>Transaction</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>

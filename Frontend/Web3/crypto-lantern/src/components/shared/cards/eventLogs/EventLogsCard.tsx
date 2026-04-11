@@ -76,7 +76,7 @@ export const EventLogsCard = ({
 							</TableCell>
 							<TableCell>
 								<a
-									href={`https://etherscan.io/tx/${event.transactionHash}`}
+									href={`https://sepolia.etherscan.io/tx/${event.transactionHash}`}
 									target='_blank'
 									rel='noopener noreferrer'
 									className='text-blue-600 hover:text-blue-800 transition-colors underline'
