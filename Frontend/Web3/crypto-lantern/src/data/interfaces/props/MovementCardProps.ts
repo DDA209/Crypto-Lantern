@@ -5,6 +5,7 @@ interface MovementCardProps {
 	mode: 'deposit' | 'withdraw';
 	profiles: RiskProfile[];
 	balance: string;
+	usdcBalance?: string;
 	chainId: number;
 	globalAPY?: number;
 	userAPY?: number;
@@ -13,7 +14,6 @@ interface MovementCardProps {
 	vaultAddress: Address;
 	vaultAbi: Abi;
 	assetAddress: Address;
-	span: number;
 	onAction?: (amount: string, profileId: string) => void;
 	onRequestMockTokens?: () => void;
 	onRequestTestTokens?: () => void;

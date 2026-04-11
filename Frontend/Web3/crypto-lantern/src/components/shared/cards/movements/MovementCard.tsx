@@ -21,6 +21,7 @@ import {
 	Loader2,
 	Clock,
 	ArrowUpCircle,
+	ArrowBigRight,
 } from 'lucide-react';
 import MovementCardProps from '@/data/interfaces/props/MovementCardProps';
 import { useTranslation } from 'react-i18next';
@@ -38,13 +39,13 @@ export const MovementCard = ({
 	mode,
 	chainId,
 	profiles,
+	usdcBalance,
 	balance,
 	assetSymbol,
 	shareSymbol,
 	vaultAddress,
 	vaultAbi,
 	assetAddress,
-	span,
 	// onAction,
 	onRequestMockTokens,
 	onRequestTestTokens,
@@ -223,8 +224,8 @@ export const MovementCard = ({
 				refetch();
 				setTimeout(() => setAmount(''), 0);
 				const timer = setTimeout(() => getEvents(), 30000);
-				return () => clearTimeout(timer);
 				reset();
+				return () => clearTimeout(timer);
 			}
 		}
 	}, [
@@ -240,7 +241,7 @@ export const MovementCard = ({
 	return (
 		<>
 			<Card
-				className='bg-white dark:bg-gray-800/10 rounded-3xl border-none shadow-xl mx-auto py-0 '
+				className='bg-white dark:bg-gray-800/10 rounded-3xl border-none shadow-xl mx-auto pt-0 pb-4'
 				style={
 					theme === 'dark'
 						? {
@@ -276,7 +277,7 @@ export const MovementCard = ({
 				<CardContent className='px-6 sm:px-8 py-4 flex flex-col gap-6'>
 					{txStatus && (
 						<div
-							className={`flex items-center gap-2 rounded-md border px-3 py-2 text-xs font-medium ${txStatus.cls}`}
+							className={`flex flitems-center gap-2 rounded-md border px-3 py-2 text-xs font-medium ${txStatus.cls}`}
 						>
 							{txStatus.icon}
 							<span className='truncate'>{txStatus.msg}</span>
@@ -285,13 +286,21 @@ export const MovementCard = ({
 					{/* Header : AppKit Button & Solde */}
 					<div className='flex flex-row items-center justify-between gap-2'>
 						{/* L'emplacement idéal pour le composant <appkit-button /> de Reown */}
-						<div className='text-sm text-navy/40'>
+						<div className='flex flex-row space-between gap-2 text-sm text-navy/40'>
 							Solde :{' '}
 							<span className='font-medium text-navy/60'>
 								{balance}{' '}
 								{mode === 'deposit' ? assetSymbol : shareSymbol}
 							</span>
 						</div>
+						{mode === 'withdraw' && (
+							<>
+								<ArrowBigRight className='h-5 w-5' />
+								<span className='text-lg font-medium text-navy/60'>
+									{usdcBalance} USDC
+								</span>
+							</>
+						)}
 						{(chainId === 31337 || chainId === 11155111) &&
 							mode === 'deposit' && (
 								<Button
@@ -339,7 +348,7 @@ export const MovementCard = ({
 										? 'default'
 										: 'outline'
 								}
-								className={`flex-1 rounded-2xl border-2 h-12 ${
+								className={`flex-1 rounded-2xl border-2 h-12 hover:bg- ${
 									selectedAsset === 'USDC'
 										? 'border-[#28B092] bg-white dark:bg-gray-800 text-gray-800 dark:text-white'
 										: 'border-lgrey bg-white/50 text-navy/70'
@@ -352,7 +361,7 @@ export const MovementCard = ({
 								<Button
 									disabled
 									variant='outline'
-									className=' rounded-2xl border-2 border-dashed border-lgrey bg-gray-50 text-navy/30 h-12'
+									className='w-full rounded-2xl border-2 border-dashed border-lgrey bg-gray-50 text-navy/30 h-12'
 								>
 									💶 EURC
 								</Button>

@@ -143,8 +143,8 @@ export default function Invest() {
 	const { writeContract } = useWriteContract();
 
 	const { data: usdcBalanceData, refetch: refetchUsdc } = useReadContract({
-		abi: usdcAbi as Abi,
 		address: usdcAddress,
+		abi: usdcAbi as Abi,
 		functionName: 'balanceOf',
 		args: address ? [address] : undefined,
 		query: { enabled: !!address },
@@ -152,13 +152,21 @@ export default function Invest() {
 
 	const { data: sharesBalanceData, refetch: refetchShares } = useReadContract(
 		{
-			abi: activeVaultProfile?.vaultAbi,
 			address: activeVaultProfile?.vaultAddress as Address,
+			abi: activeVaultProfile?.vaultAbi,
 			functionName: 'balanceOf',
 			args: address ? [address] : undefined,
 			query: { enabled: !!address && !!activeVaultProfile?.vaultAddress },
 		},
 	);
+
+	const { data: sharePrice, refetch: refetchSharePrice } = useReadContract({
+		address: activeVaultProfile?.vaultAddress as Address,
+		abi: activeVaultProfile?.vaultAbi,
+		functionName: 'convertToAssets',
+		args: [BigInt(10 ** 6)],
+		query: { enabled: !!address && !!activeVaultProfile?.vaultAddress },
+	});
 
 	const formattedUsdcBalance = usdcBalanceData
 		? formatUnits(usdcBalanceData as bigint, 6)
@@ -166,11 +174,20 @@ export default function Invest() {
 	const formattedSharesBalance = sharesBalanceData
 		? formatUnits(sharesBalanceData as bigint, 6)
 		: '0.00';
+	const formattedSharesUsdcEqivBalance =
+		sharesBalanceData && sharePrice
+			? formatUnits(
+					((sharesBalanceData as bigint) * (sharePrice as bigint)) /
+						BigInt(10 ** 6),
+					6,
+				)
+			: '0.00';
 
 	const refetchAll = useCallback(() => {
 		refetchUsdc();
 		refetchShares();
-	}, [refetchUsdc, refetchShares]);
+		refetchSharePrice();
+	}, [refetchUsdc, refetchShares, refetchSharePrice]);
 
 	const mintMockUSDC = () => {
 		if (!address || !usdcAddress) {
@@ -214,7 +231,7 @@ export default function Invest() {
 	};
 
 	return (
-		<div className='grid grid-cols-1 md:grid-cols-2 gap-8 items-start justify-center py-2 max-w-6xl mx-auto px-4'>
+		<div className='grid grid-cols-1 md:grid-cols-2 gap-8 items-start justify-center py-10 max-w-6xl mx-auto px-4'>
 			{/* <div className='flex flex-col gap-8 items-center justify-center py-2 max-w-6xl mx-auto px-4'> */}
 			{/* <div className='flex flex-row gap-8 items-center max-w-6xl'> */}
 			{/* CARTE DE DÉPÔT */}
@@ -233,7 +250,6 @@ export default function Invest() {
 				vaultAddress={vaultPrudentGlUSDPAddress as Address}
 				vaultAbi={VaultPrudentGlUSDPABI as Abi}
 				assetAddress={usdcAddress as Address}
-				span={1}
 			/>
 
 			{/* CARTE DE RETRAIT */}
@@ -244,13 +260,13 @@ export default function Invest() {
 				chainId={chainId}
 				profiles={RISK_PROFILES}
 				balance={formattedSharesBalance}
+				usdcBalance={formattedSharesUsdcEqivBalance}
 				// userAPY={calculateUserAPY()}
 				assetSymbol={activeVaultProfile?.assetSymbol ?? '----'}
 				shareSymbol={activeVaultProfile?.shareSymbol ?? '----'}
 				vaultAddress={vaultPrudentGlUSDPAddress as Address}
 				vaultAbi={VaultPrudentGlUSDPABI as Abi}
 				assetAddress={usdcAddress as Address}
-				span={1}
 			/>
 			{/* </div> */}
 			<EventLogsCard

@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useChainId, usePublicClient, useWriteContract } from 'wagmi';
-import { Address, parseUnits, BaseError } from 'viem';
+import { Address, BaseError } from 'viem';
 import { useLantern } from '@/context/LanternContext';
 import VaultPrudentGlUSDPABI from '@/context/VaultPrudentGlUSDP.json';
 import {
@@ -258,7 +258,7 @@ export default function AdminDAO() {
 												),
 											])
 										}
-										disabled={isExecuting}
+										disabled={isExecuting || !newFees}
 									>
 										Maj
 									</Button>
@@ -279,7 +279,7 @@ export default function AdminDAO() {
 												),
 											])
 										}
-										disabled={isExecuting}
+										disabled={isExecuting || !newBuffer}
 									>
 										Maj
 									</Button>
@@ -305,14 +305,14 @@ export default function AdminDAO() {
 									}
 								/>
 								<Button
-									variant='outline'
 									onClick={() =>
 										handleTx('setDAOAddress', [
 											newDaoAddress,
 										])
 									}
+									disabled={isExecuting || !newDaoAddress}
 								>
-									Proposer
+									Proposer cette adresse
 								</Button>
 							</CardContent>
 						</Card>

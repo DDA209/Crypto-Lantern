@@ -361,8 +361,6 @@ export default function AdminTeam() {
 										disabled={
 											isExecuting || !newAddressInput
 										}
-										variant='outline'
-										className='w-full border-navy text-navy hover:bg-navy hover:text-white transition-colors'
 									>
 										{isExecuting ? (
 											<Loader2 className='mr-2 h-5 w-5 animate-spin' />

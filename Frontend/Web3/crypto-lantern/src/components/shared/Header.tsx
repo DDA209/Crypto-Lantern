@@ -21,10 +21,7 @@ const Header = () => {
 		<header className='sticky top-0 z-50 bg-white dark:bg-gray-900 transition-shadow duration-300 shadow-xs border-b border-gray-100 dark:border-gray-800'>
 			<div className='max-w-7xl mx-auto'>
 				<div className='flex items-center justify-between h-16'>
-					<Link
-						href='/'
-						className='flex items-center gap-2 group'
-					>
+					<div className='flex items-center gap-2 group'>
 						<Image
 							src={`/lantern-logo-${theme ?? 'light'}.svg`}
 							alt='Logo'
@@ -82,7 +79,7 @@ const Header = () => {
 						<span className='hidden md:block font-bold text-lg tracking-tight text-[#28b092]'>
 							{appName}
 						</span>
-					</Link>
+					</div>
 
 					<nav className='hidden md:flex items-center gap-5'>
 						<button className='text-sm font-medium transition-colors duration-200 text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'>
