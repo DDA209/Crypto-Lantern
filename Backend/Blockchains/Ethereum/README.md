@@ -36,7 +36,7 @@ Le script de déploiement doit effectuer obligatoirement un premier dépôt verr
 // Extrait de script de déploiement Hardhat (deploy.ts)
 await usdc.approve(vaultAddress, ethers.parseUnits('10', 6));
 await vault.deposit(
-	// 10 USDC (avec 6 décimales), les jetons glUSDC-P équivalents seront détruits
+	// 10 USDC (avec 6 décimales), les jetons glUSD-P équivalents seront détruits
 	ethers.parseUnits('10', 6),
 	'0x000000000000000000000000000000000000dEaD',
 );
@@ -48,7 +48,7 @@ const approveCall = m.call(usdc, 'approve', [vault, 10_000_000n], {
 m.call(
 	vault,
 	'deposit',
-	// 10 USDC (avec 6 décimales), les jetons glUSDC-P équivalents seront détruits
+	// 10 USDC (avec 6 décimales), les jetons glUSD-P équivalents seront détruits
 	[10_000_000n, '0x000000000000000000000000000000000000dEaD'],
 	{ id: 'MintDeadShares', after: [approveCall] },
 );
