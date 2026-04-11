@@ -239,7 +239,7 @@ export const MovementCard = ({
 	return (
 		<>
 			<Card
-				className='bg-bg rounded-3xl border-none shadow-xl w-full max-w-md mx-auto'
+				className='bg-white dark:bg-gray-800/10 rounded-3xl border-none shadow-xl w-full max-w-md mx-auto py-0 '
 				style={
 					theme === 'dark'
 						? {
@@ -250,11 +250,11 @@ export const MovementCard = ({
 				}
 			>
 				<CardHeader
-					className={`rounded-t-3xl pb-4 border-b border-navy/5 ${mode === 'deposit' ? 'bg-linear-to-r from-[#28B092]/5 to-transparent' : 'bg-linear-to-r from-navy/5 to-transparent'}`}
+					className={`py-4 rounded-t-3xl pb-4 border-b border-navy/5 ${mode === 'deposit' ? 'bg-linear-to-r from-[#28B092]/25 to-transparent' : 'bg-linear-to-r from-orange-500/25 to-transparent'}`}
 				>
 					<CardTitle className='flex items-center gap-3'>
 						<div
-							className={`p-2 rounded-xl ${mode === 'deposit' ? 'bg-[#28B092]/10 text-[#28B092]' : 'bg-navy/10 text-navy'}`}
+							className={`p-2 rounded-lg ${mode === 'deposit' ? 'bg-[#28B092]/10 text-[#28B092]' : 'bg-orange-500/10 text-orange-500'}`}
 						>
 							{mode === 'deposit' ? (
 								<ArrowDownCircle className='h-5 w-5' />
@@ -412,7 +412,8 @@ export const MovementCard = ({
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
 								disabled={!activeProfile?.isActive}
-								className='text-2xl lw-full bg-white border-2 border-lgrey rounded-xl px-4 py-6 font-bold text-navy placeholder:text-navy/20 focus-visible:ring-0 focus-visible:border-[#28B092] transition-colors pr-22'
+								className='text-lg lw-full bg-white border-2 border-lgrey rounded-xl px-4 py-6 font-bold text-navy placeholder:text-navy/20 focus-visible:ring-0 focus-visible:border-[#28B092] transition-colors pr-23'
+								style={{ fontSize: '1rem' }}
 							/>
 							<div className='absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2'>
 								<button
@@ -455,7 +456,7 @@ export const MovementCard = ({
 							!amount
 						}
 						onClick={handleInitialClick}
-						className='w-full rounded-xl py-6 text-lg font-bold bg-[#28B092] hover:bg-[#2ABFAB] text-white disabled:opacity-40'
+						className={`w-full rounded-xl py-6 text-lg font-bold ${mode === 'deposit' ? 'bg-[#28B092]/90' : 'bg-orange-600/80'} text-white disabled:opacity-40`}
 					>
 						{isExecuting ? (
 							<Loader2 className='mr-2 h-5 w-5 animate-spin' />

@@ -306,8 +306,8 @@ export default function AdminTeam() {
 				<>
 					<div className='grid md:grid-cols-2 gap-6'>
 						{/* CARTE HARVEST */}
-						<Card className='shadow-lg border-none'>
-							<CardHeader className='bg-[#28B092]/10 rounded-t-xl'>
+						<Card className='shadow-lg border-none py-0'>
+							<CardHeader className='bg-[#28B092]/10 rounded-t-lg'>
 								<CardTitle className='text-[#28B092] flex items-center gap-2'>
 									<Wheat className='h-5 w-5' />
 									Exécuter le Harvest

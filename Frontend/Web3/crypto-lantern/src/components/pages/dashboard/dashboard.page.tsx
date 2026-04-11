@@ -1,13 +1,12 @@
 'use client';
 
 import { useReadContracts, useChainId } from 'wagmi';
-import { formatUnits, formatEther, type Abi } from 'viem';
+import { formatUnits } from 'viem';
 import { useLantern } from '@/context/LanternContext';
 import VaultPrudentGlUSDPABI from '@/context/VaultPrudentGlUSDP.json';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton'; // Si tu as ce composant shadcn
 import {
-	Activity,
 	ShieldCheck,
 	Clock,
 	Coins,
@@ -20,10 +19,13 @@ import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
 import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { useEffect, useState } from 'react';
+import { useTheme } from 'next-themes';
+import DashboarCard from '@/components/ui/cards/DashboardCard';
 
 export default function VaultDashboard() {
 	const { vaultPrudentGlUSDPAddress, isConnected } = useLantern();
 	const chainId = useChainId();
+	const { theme } = useTheme();
 
 	const [bufferStats, setBufferStats] = useState({ amount: 0, bips: 0 });
 	const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -161,206 +163,183 @@ export default function VaultDashboard() {
 	return (
 		<>
 			<div className='max-w-4xl mx-auto py-10 px-4 space-y-0 grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
-				{/* --- SECTION METRIQUES FINANCIERES --- */}
-				<Card className='border-none shadow-md '>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Total Assets (AUM)
-						</CardTitle>
-						<Landmark className='h-4 w-4 text-[#28B092]' />
-					</CardHeader>
-					<CardContent>
+				<DashboarCard
+					title='Total Assets (AUM)'
+					icon={<Landmark className='h-4 w-4 text-[#28B092]' />}
+					span={1}
+					content={
 						<div className='text-2xl font-bold'>
 							{totalAssets.result
 								? formatUnits(totalAssets.result as bigint, 6)
 								: '0'}{' '}
 							USDC
 						</div>
-						<p className='text-xs text-muted-foreground'>
-							Total des fonds sous gestion
-						</p>
-					</CardContent>
-				</Card>
+					}
+					theme={theme}
+				/>
 
-				<Card className='border-none shadow-md '>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Total Supply
-						</CardTitle>
-						<Coins className='h-4 w-4 text-blue-500' />
-					</CardHeader>
-					<CardContent>
+				<DashboarCard
+					title='Total Supply'
+					icon={<Coins className='h-4 w-4 text-blue-500' />}
+					span={1}
+					content={
 						<div className='text-2xl font-bold'>
 							{totalSupply.result
 								? formatUnits(totalSupply.result as bigint, 6)
 								: '0'}{' '}
 							glUSD-P
 						</div>
-						<p className='text-xs text-muted-foreground'>
-							Parts totales émises
-						</p>
-					</CardContent>
-				</Card>
+					}
+					theme={theme}
+				/>
 
-				<Card className='border-none shadow-md '>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Prix de la part
-						</CardTitle>
-						<ArrowUpRight className='h-4 w-4 text-green-500' />
-					</CardHeader>
-					<CardContent>
+				<DashboarCard
+					title='Prix de la part'
+					icon={<ArrowUpRight className='h-4 w-4 text-green-500' />}
+					span={1}
+					content={
 						<div className='text-2xl font-bold'>
 							{pricePerShare.result
 								? formatUnits(pricePerShare.result as bigint, 6)
 								: '1.00'}{' '}
 							USDC
 						</div>
-						<p className='text-xs text-muted-foreground'>
-							Valeur actuelle de 1 glUSD-P
-						</p>
-					</CardContent>
-				</Card>
+					}
+					theme={theme}
+				/>
 
-				{/* --- SECTION CONFIGURATION & ETAT --- */}
-				<Card className='border-none shadow-md '>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Liquidité de sécurité (Buffer)
-						</CardTitle>
-						<Percent className='h-4 w-4 text-amber-500' />
-					</CardHeader>
-					<CardContent>
-						{isLoadingStats ? (
-							<Skeleton />
-						) : (
-							<div className='text-2xl font-bold'>
-								{Math.ceil(bufferStats.bips) / 100}%
-							</div>
-						)}
-						{isLoadingStats ? (
-							<Skeleton />
-						) : (
-							<div className='text-2xl font-bold'>
-								{bufferStats.amount} USDC
-							</div>
-						)}
-						<p className='text-xs text-muted-foreground'>
-							Pourcentage conservé hors stratégies
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className='border-none shadow-md '>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Dernier Harvest
-						</CardTitle>
-						<Clock className='h-4 w-4 text-purple-500' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-sm font-bold'>
-							{formatDate(lastHarvest)}
-						</div>
-						<p className='text-xs text-muted-foreground'>
-							Dernière récolte de rendements
-						</p>
-					</CardContent>
-				</Card>
-
-				<Card className='border-none shadow-md '>
-					<CardHeader className='flex flex-row items-center justify-between space-y-0 pb-2'>
-						<CardTitle className='text-sm font-medium'>
-							Date de déploiement
-						</CardTitle>
-						<ShieldCheck className='h-4 w-4 text-navy' />
-					</CardHeader>
-					<CardContent>
-						<div className='text-sm font-bold'>
-							{formatDate(deploymentDate)}
-						</div>
-						<p className='text-xs text-muted-foreground'>
-							Initialisation du contrat
-						</p>
-					</CardContent>
-				</Card>
-				{/* SECTION GOUVERNANCE ET ROLES */}
-
-				<Card className='border-none shadow-md'>
-					<CardHeader>
-						<CardTitle className='text-sm flex items-center gap-2'>
-							<Clock className='h-4 w-4 text-navy' />
-							Historique Technique
-						</CardTitle>
-					</CardHeader>
-					<CardContent className='space-y-2'>
-						<div className='flex justify-between text-sm'>
-							<span className='text-muted-foreground'>
-								Déploiement :
-							</span>
-							<span className='font-medium'>
-								{deploymentDate.result
-									? new Date(
-											Number(deploymentDate.result) *
-												1000,
-										).toLocaleDateString()
-									: '---'}
-							</span>
-						</div>
-						<div className='flex justify-between text-sm'>
-							<span className='text-muted-foreground'>
-								Dernier Harvest :
-							</span>
-							<span className='font-medium'>
-								{lastHarvest.result
-									? new Date(
-											Number(lastHarvest.result) * 1000,
-										).toLocaleString()
-									: 'Jamais'}
-							</span>
-						</div>
-						<div className='flex justify-between text-sm'>
-							<span className='text-muted-foreground'>
-								Buffer de sécurité :
-							</span>
+				<DashboarCard
+					title='Liquidité de sécurité (Buffer)'
+					icon={<Percent className='h-4 w-4 text-amber-500' />}
+					span={1}
+					content={
+						<div className='text-2xl font-bold'>
 							{isLoadingStats ? (
 								<Skeleton />
 							) : (
-								<span className='font-medium'>
+								<div className='text-2xl font-bold'>
 									{Math.ceil(bufferStats.bips) / 100}%
-								</span>
+								</div>
 							)}
-						</div>
-					</CardContent>
-				</Card>
-				<Card className='border-none shadow-md md:col-span-2'>
-					<CardHeader>
-						<CardTitle className='text-sm flex items-center gap-2'>
-							<Shield className='h-4 w-4 text-navy' />
-							Gouvernance & Sécurité
-						</CardTitle>
-					</CardHeader>
-					<CardContent className='space-y-4'>
-						<div className='bg-gray-100 dark:bg-gray-900 p-3 rounded-lg'>
-							<p className='text-[10px] uppercase font-bold text-gray-400 mb-2'>
-								Propriétaire & DAO
+							{isLoadingStats ? (
+								<Skeleton />
+							) : (
+								<div className='text-2xl font-bold'>
+									{bufferStats.amount} USDC
+								</div>
+							)}
+							<p className='text-xs text-muted-foreground'>
+								Pourcentage conservé hors stratégies
 							</p>
-							{renderAddress('DAO Actuelle', dao)}
-							{renderAddress('Nouvelle DAO (En attente)', newDao)}
 						</div>
+					}
+					theme={theme}
+				/>
 
-						<div className='bg-gray-100 dark:bg-gray-900 p-3 rounded-lg'>
-							<p className='text-[10px] uppercase font-bold text-gray-400 mb-2'>
-								Gestion Technique (Team)
-							</p>
-							{renderAddress('Team Actuelle', team)}
-							{renderAddress(
-								'Nouvelle Team (En attente)',
-								newTeam,
-							)}
+				<DashboarCard
+					title='Dernier Harvest'
+					icon={<Clock className='h-4 w-4 text-purple-500' />}
+					span={1}
+					content={
+						<div className='text-2xl font-bold'>
+							{formatDate(lastHarvest)}
 						</div>
-					</CardContent>
-				</Card>
+					}
+					theme={theme}
+				/>
+
+				<DashboarCard
+					title='Date de déploiement'
+					icon={<ShieldCheck className='h-4 w-4 text-navy' />}
+					span={1}
+					content={
+						<div className='text-2xl font-bold'>
+							{formatDate(deploymentDate)}
+						</div>
+					}
+					theme={theme}
+				/>
+
+				<DashboarCard
+					title='Historique Technique'
+					icon={<Clock className='h-4 w-4 text-navy' />}
+					span={1}
+					content={
+						<>
+							<div className='flex justify-between text-sm'>
+								<span className='text-muted-foreground'>
+									Déploiement :
+								</span>
+								<span className='font-medium'>
+									{deploymentDate.result
+										? new Date(
+												Number(deploymentDate.result) *
+													1000,
+											).toLocaleDateString()
+										: '---'}
+								</span>
+							</div>
+							<div className='flex justify-between text-sm'>
+								<span className='text-muted-foreground'>
+									Dernier Harvest :
+								</span>
+								<span className='font-medium'>
+									{lastHarvest.result
+										? new Date(
+												Number(lastHarvest.result) *
+													1000,
+											).toLocaleString()
+										: 'Jamais'}
+								</span>
+							</div>
+							<div className='flex justify-between text-sm'>
+								<span className='text-muted-foreground'>
+									Buffer de sécurité :
+								</span>
+								{isLoadingStats ? (
+									<Skeleton />
+								) : (
+									<span className='font-medium'>
+										{Math.ceil(bufferStats.bips) / 100}%
+									</span>
+								)}
+							</div>
+						</>
+					}
+					theme={theme}
+				/>
+
+				<DashboarCard
+					title='Gouvernance & Sécurité'
+					icon={<Shield className='h-4 w-4 text-navy' />}
+					span={2}
+					content={
+						<>
+							<div className='bg-gray-100 dark:bg-gray-900 p-3 rounded-lg'>
+								<p className='text-[10px] uppercase font-bold text-gray-400 mb-2'>
+									Propriétaire & DAO
+								</p>
+								{renderAddress('DAO Actuelle', dao)}
+								{renderAddress(
+									'Nouvelle DAO (En attente)',
+									newDao,
+								)}
+							</div>
+
+							<div className='bg-gray-100 dark:bg-gray-900 p-3 rounded-lg'>
+								<p className='text-[10px] uppercase font-bold text-gray-400 mb-2'>
+									Gestion Technique (Team)
+								</p>
+								{renderAddress('Team Actuelle', team)}
+								{renderAddress(
+									'Nouvelle Team (En attente)',
+									newTeam,
+								)}
+							</div>
+						</>
+					}
+					theme={theme}
+				/>
 			</div>
 		</>
 	);

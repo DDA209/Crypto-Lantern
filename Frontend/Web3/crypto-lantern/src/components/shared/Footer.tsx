@@ -1,10 +1,8 @@
 import { appName } from '@/config';
 import { LanguageSwitcher } from '../ui/toggles/LanguageSwitcher';
 import { NetworkDevSwitch } from '../ui/toggles/NetworkToggle';
-import { useChainId } from 'wagmi';
 
 const Footer = () => {
-	const chainId = useChainId();
 	return (
 		<footer className='bg-navy z-50'>
 			<div className='border-t border-black/10 dark:border-white/10'>
@@ -42,9 +40,7 @@ const Footer = () => {
 
 					<div className='flex items-center gap-4'>
 						<LanguageSwitcher />
-						{(chainId === 11155111 || chainId === 31337) && (
-							<NetworkDevSwitch />
-						)}
+						<NetworkDevSwitch />
 					</div>
 				</div>
 			</div>

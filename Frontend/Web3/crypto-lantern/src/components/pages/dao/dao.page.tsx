@@ -314,14 +314,6 @@ export default function AdminDAO() {
 								>
 									Proposer
 								</Button>
-								<Button
-									variant='default'
-									onClick={() =>
-										handleTx('confirmDaoAddress', [])
-									}
-								>
-									Confirmer (Accepter)
-								</Button>
 							</CardContent>
 						</Card>
 					</div>
