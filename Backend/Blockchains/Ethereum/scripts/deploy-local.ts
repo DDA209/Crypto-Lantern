@@ -97,13 +97,20 @@ try {
 
 // 7. Inflation attack insurance
 console.log('\n🟢🟢🟢🟢🟢🔘 Inflation attack insurance...');
-const initialDepositAmount = ethers.parseUnits('10', 6); // 10 USDC
-await mockUSDC.approve(vault.target, initialDepositAmount);
-await vault.deposit(
-	initialDepositAmount,
-	'0x000000000000000000000000000000000000dEaD',
-);
-console.log(`✅ ${ethers.formatUnits(initialDepositAmount, 6)} USDC deposited`);
+try {
+	const initialDepositAmount = ethers.parseUnits('10', 6); // 10 USDC
+	await mockUSDC.approve(vault.target, initialDepositAmount);
+	await vault.deposit(
+		initialDepositAmount,
+		'0x000000000000000000000000000000000000dEaD',
+	);
+	console.log(
+		`✅ ${ethers.formatUnits(initialDepositAmount, 6)} USDC deposited`,
+	);
+} catch (error) {
+	console.log(`⛔ Deposit failed: ${error}`);
+	process.exit(1);
+}
 
 console.log('\n🟢🟢🟢🟢🟢🟢 Local deployment completed');
 console.table({
