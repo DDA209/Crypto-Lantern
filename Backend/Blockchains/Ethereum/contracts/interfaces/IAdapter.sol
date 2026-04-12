@@ -1,12 +1,14 @@
 // SPDX-License-Identifier: MIT
 pragma solidity 0.8.28;
 
+import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
+
 /// @title IAdapter
 /// @author Didier PASCAREL (https://www.linkedin.com/in/didier-pascarel/)
 /// @notice Interface for an adapter
 /// @dev The adapter is used to invest
 /// @custom:studywork Final project to be presented for the defense
-interface IAdapter {
+interface IAdapter is IERC165 {
     /* Errors */
 
     /// @notice Error thrown when the caller is not the vault
@@ -16,15 +18,15 @@ interface IAdapter {
 
     /// @notice Emitted when assets are invested into the adapter
     /// @dev The assets are invested into the adapter
-    /// @param user The address of the user who invested the assets
+    /// @param vault The address of the vault who invested the assets
     /// @param assets The amount of assets invested
-    event Invest(address indexed user, uint256 assets);
+    event Invest(address indexed vault, uint256 assets);
 
     /// @notice Emitted when assets are divested from the adapter
     /// @dev The assets are divested from the adapter
-    /// @param user The address of the user who divested the assets
+    /// @param vault The address of the vault who divested the assets
     /// @param assets The amount of assets divested
-    event Divest(address indexed user, uint256 assets);
+    event Divest(address indexed vault, uint256 assets);
     
     /// @notice Emitted when assets are received by the adapter
     /// @dev The assets are received by the adapter
@@ -32,8 +34,6 @@ interface IAdapter {
     event DepositReceived(address indexed sender);
     
     /* Functions */
-
-    function supportsInterface(bytes4 interfaceId) external view returns (bool);
 
     /// @notice Returns the total amount of assets invested in the adapter
     /// @return The total amount of assets invested in the adapter

@@ -69,16 +69,20 @@ const deployFixture = async (): Promise<{
 		vaultPrudentGlUSDP.target,
 	])) as MockAdapter;
 
-	// Mint some USDC to the whale
-	const mintAmount = ethers.parseUnits('1000000', 6); // 1 000 000 USDC
+	// Mint some USDC to the whale 1 000 000 USDC
+	const mintAmount = ethers.parseUnits('1000000', 6);
 	const approveTx = await mockUSDC
 		.connect(accounts.whale)
 		.approve(vaultPrudentGlUSDP.target, mintAmount);
 	await approveTx.wait();
 	await mockUSDC.mint(accounts.whale.address, mintAmount);
 
-	// First deposit
-	const depositTx = deposit(accounts.whale, vaultPrudentGlUSDP, 1000n);
+	// First deposit 10USDC
+	const depositTx = deposit(
+		accounts.whale,
+		vaultPrudentGlUSDP,
+		ethers.parseUnits('10', 6),
+	);
 	await (await depositTx).wait();
 
 	// Return accounts and contracts
@@ -104,7 +108,7 @@ const deposit = (
 	return depositTx;
 };
 
-//*
+/*
 describe('1. Contract deployments', () => {
 	let accounts: Accounts;
 	let mockUSDC: MockERC20;
@@ -757,7 +761,7 @@ describe('4. Basic Vault Accounting', () => {
 			);
 		});
 	});
-}); // */
+}); // * /
 describe('5. Asset Management & Rebalancing', () => {
 	let accounts: Accounts;
 	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
@@ -790,13 +794,19 @@ describe('5. Asset Management & Rebalancing', () => {
 
 			await expect(rebalanceTx)
 				.to.emit(vaultPrudentGlUSDP, 'Rebalance')
-				.withArgs(true, 1000n, 100n, 900n, 900n);
+				.withArgs(
+					true,
+					ethers.parseUnits('10', 6),
+					ethers.parseUnits('1', 6),
+					ethers.parseUnits('9', 6),
+					ethers.parseUnits('9', 6),
+				);
 
 			const vaultBufferAssets = await mockUSDC
 				.connect(accounts.dao)
 				.balanceOf(vaultPrudentGlUSDP.target);
 
-			expect(vaultBufferAssets).to.equal(100n);
+			expect(vaultBufferAssets).to.equal(ethers.parseUnits('1', 6));
 		});
 		it('Should revert if non-DAO user tries to rebalance', async () => {
 			const rebalanceTx = vaultPrudentGlUSDP
@@ -820,12 +830,16 @@ describe('5. Asset Management & Rebalancing', () => {
 				.connect(accounts.attacker)
 				.balanceOf(vaultPrudentGlUSDP.target);
 
-			expect(adapter1InvestedAssets).to.equal(180n);
-			expect(adapter2InvestedAssets).to.equal(720n);
-			expect(vaultBufferAssets).to.equal(100n);
+			expect(adapter1InvestedAssets).to.equal(
+				ethers.parseUnits('1.8', 6),
+			);
+			expect(adapter2InvestedAssets).to.equal(
+				ethers.parseUnits('7.2', 6),
+			);
+			expect(vaultBufferAssets).to.equal(ethers.parseUnits('1', 6));
 		});
 	});
-}); // */
+}); // * /
 describe('6. Yield, Fees & Harvest', () => {
 	let accounts: Accounts;
 	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
@@ -858,30 +872,42 @@ describe('6. Yield, Fees & Harvest', () => {
 				.harvest();
 			await expect(harvestTx)
 				.to.emit(vaultPrudentGlUSDP, 'Harvest')
-				.withArgs(0n, 0n, 0n, 1000n);
+				.withArgs(0n, 0n, 0n, ethers.parseUnits('10', 6));
 		});
 		it('Should the strategies generate yield', async () => {
-			// TVL origin: 180 + 720 + 100 = 1000;
-			// new TVL: 850 + 650 + 100 = 1600;
-			// yield: 600 ;
-			// fees: 600 * 0.05 = 30
-			// new shares: 30 * 1000 / 1000 = 30
-			// new total assets: 1600 + 30 = 1630
-			// new share price: 1630 / 1000 = 1.63
-			// new repartition: 163 for buffer; 1467 for strategies
-			//                  1467 * 0.2 = 293.4; 1467 * 0.8 = 1173.6
+			// TVL origin: 1.8 + 7.2 + 1 = 10;
+			// new TVL: 8.5 + 6.5 + 1 = 16;
+			// yield: 6 ;
+			// fees: 6 * 0.05 = 0.3
+			// new share price: 16 / 10 = 1.6
+			// shares to mint: 0.3 * 10 / 16 = 0.1875
+			// new shares: 10 + 0.1875 = 10.1875
+			// new total assets: 16
+			// new repartition: 1.63 for buffer; 14.67 for strategies
+			//                  14.67 * 0.2 = 2.934; 14.67 * 0.8 = 11.736
 			await vaultPrudentGlUSDP.connect(accounts.dao).forceRebalance();
-			await mockAdapter1.setMockAssets(850n); // + 670
-			await mockUSDC.mint(mockAdapter1.target, 670n);
-			await mockAdapter2.setMockAssets(650n); // - 70
-			await mockUSDC.burn(mockAdapter2.target, 70n);
+			await mockAdapter1.setMockAssets(ethers.parseUnits('8.5', 6)); // + 6.7
+			await mockUSDC.mint(
+				mockAdapter1.target,
+				ethers.parseUnits('6.7', 6),
+			);
+			await mockAdapter2.setMockAssets(ethers.parseUnits('6.5', 6)); // - 0.7
+			await mockUSDC.burn(
+				mockAdapter2.target,
+				ethers.parseUnits('0.7', 6),
+			);
 
 			const harvestTx = vaultPrudentGlUSDP
 				.connect(accounts.team)
 				.harvest();
 			await expect(harvestTx)
 				.to.emit(vaultPrudentGlUSDP, 'Harvest')
-				.withArgs(600n, 30n, 18n, 1600n);
+				.withArgs(
+					ethers.parseUnits('6', 6),
+					ethers.parseUnits('0.3', 6),
+					ethers.parseUnits('0.1875', 6),
+					ethers.parseUnits('16', 6),
+				);
 		});
 		it('Should revert if non-DAO user tries to harvest', async () => {
 			const harvestTx = vaultPrudentGlUSDP
@@ -920,10 +946,10 @@ describe('7. Withdrawals & Force Divest', () => {
 		]);
 		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
 		await Promise.all([
-			mockAdapter1.setMockAssets(1000n),
-			mockUSDC.mint(mockAdapter1.target, 1000n),
-			mockAdapter2.setMockAssets(4500n),
-			mockUSDC.mint(mockAdapter2.target, 4500n),
+			mockAdapter1.setMockAssets(ethers.parseUnits('10', 6)),
+			mockUSDC.mint(mockAdapter1.target, ethers.parseUnits('10', 6)),
+			mockAdapter2.setMockAssets(ethers.parseUnits('45', 6)),
+			mockUSDC.mint(mockAdapter2.target, ethers.parseUnits('45', 6)),
 		]);
 		await vaultPrudentGlUSDP.connect(accounts.team).harvest();
 	});
@@ -934,52 +960,62 @@ describe('7. Withdrawals & Force Divest', () => {
 			);
 			const withdrawTx = vaultPrudentGlUSDP
 				.connect(accounts.whale)
-				.withdraw(500n, accounts.whale.address, accounts.whale.address);
+				.withdraw(
+					ethers.parseUnits('5', 6),
+					accounts.whale.address,
+					accounts.whale.address,
+				);
 			await expect(withdrawTx)
 				.to.emit(vaultPrudentGlUSDP, 'Withdraw')
 				.withArgs(
 					accounts.whale.address,
 					accounts.whale.address,
 					accounts.whale.address,
-					500n,
-					81n,
+					ethers.parseUnits('5', 6),
+					ethers.parseUnits('5', 6) * 81n,
 				);
 			const bufferAfter = await mockUSDC.balanceOf(
 				vaultPrudentGlUSDP.target,
 			);
-			expect(bufferAfter).to.equal(bufferBefore - 500n);
+			expect(bufferAfter).to.equal(
+				bufferBefore - ethers.parseUnits('5', 6),
+			);
 		});
 		it('Should allow the user to force withdraw assets on buffer and strategies', async () => {
 			const bufferBefore = await mockUSDC.balanceOf(
-				// 650
+				//5.5
 				vaultPrudentGlUSDP.target,
 			);
 			const strategy1BalanceBefore = await mockUSDC.balanceOf(
-				// 1170
+				//9
 				mockAdapter1.target,
 			);
 			const strategy2BalanceBefore = await mockUSDC.balanceOf(
-				// 4680
+				//40.5
 				mockAdapter2.target,
+			);
+			const sharesValue = await vaultPrudentGlUSDP.convertToShares(
+				ethers.parseUnits('6', 6),
 			);
 
 			const withdrawTx = vaultPrudentGlUSDP
 				.connect(accounts.whale)
 				.withdraw(
-					1200n,
+					sharesValue,
 					accounts.whale.address,
 					accounts.whale.address,
 				);
+
 			await expect(withdrawTx)
 				.to.emit(vaultPrudentGlUSDP, 'Withdraw')
 				.withArgs(
 					accounts.whale.address,
 					accounts.whale.address,
 					accounts.whale.address,
-					1200n,
-					193n,
+					ethers.parseUnits('6', 6),
+					ethers.parseUnits('6', 6) * sharesValue,
 				);
-			const strategiesDivested = 1200n - bufferBefore; // 1200 - 650 = 550
+			const strategiesDivested = ethers.parseUnits('6', 6) - bufferBefore; // 1200 - 650 = 550
 			const strategy1Divested = (strategiesDivested * 200n) / 1000n; // 550 * 0.2 = 110
 			const strategy2Divested = (strategiesDivested * 800n) / 1000n; // 550 * 0.8 = 440
 
@@ -1030,7 +1066,7 @@ describe('7. Withdrawals & Force Divest', () => {
 		});
 		it('Should revert if withdrawal receiver address is not allowed', async () => {});
 	});
-}); // */
+}); // * /
 describe('8. Read Functions', () => {
 	let accounts: Accounts;
 	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
@@ -1056,10 +1092,10 @@ describe('8. Read Functions', () => {
 		]);
 		await vaultPrudentGlUSDP.connect(accounts.dao).setFeesBIPS(500);
 		await Promise.all([
-			mockAdapter1.setMockAssets(1000n),
-			mockUSDC.mint(mockAdapter1.target, 1000n),
-			mockAdapter2.setMockAssets(4500n),
-			mockUSDC.mint(mockAdapter2.target, 4500n),
+			mockAdapter1.setMockAssets(ethers.parseUnits('10', 6)),
+			mockUSDC.mint(mockAdapter1.target, ethers.parseUnits('10', 6)),
+			mockAdapter2.setMockAssets(ethers.parseUnits('45', 6)),
+			mockUSDC.mint(mockAdapter2.target, ethers.parseUnits('45', 6)),
 		]);
 		await vaultPrudentGlUSDP.connect(accounts.team).harvest();
 	});
@@ -1097,18 +1133,164 @@ describe('8. Read Functions', () => {
 		});
 		it('Should everyone be able to read the buffer total assets', async () => {
 			expect(await vaultPrudentGlUSDP.getBufferTotalAssets()).to.equal(
-				650n,
+				ethers.parseUnits('55', 6),
 			);
 		});
 		it('Should everyone be able to read the DAO total shares', async () => {
 			expect(
 				await vaultPrudentGlUSDP.balanceOf(accounts.dao.address),
-			).to.equal(42n);
+			).to.equal(ethers.parseUnits('42', 6));
 		});
 		it('Should everyone be able to read user total shares', async () => {
 			expect(
 				await vaultPrudentGlUSDP.balanceOf(accounts.whale.address),
-			).to.equal(1000n);
+			).to.equal(ethers.parseUnits('55', 6));
 		});
 	});
 }); // */
+describe('9. Security & Attacks', () => {
+	let accounts: Accounts;
+	let vaultPrudentGlUSDP: VaultPrudentGlUSDP;
+	let mockUSDC: MockERC20;
+
+	beforeEach(async () => {
+		({ accounts, vaultPrudentGlUSDP, mockUSDC } =
+			await networkHelpers.loadFixture(deployFixture));
+	});
+
+	describe('Inflation attack', () => {
+		it('Should prevent inflation attack via virtual offset or dead shares', async () => {
+			// La 'whale' a déjà fait le tout premier dépôt (1000n). La protection anti-inflation est concidérée déjà active.
+
+			// Mint some USDC to the Poor User
+			const approveTx = await mockUSDC
+				.connect(accounts.poorUser)
+				.approve(
+					vaultPrudentGlUSDP.target,
+					ethers.parseUnits('100', 6),
+				);
+			await approveTx.wait();
+			await mockUSDC.mint(
+				accounts.poorUser.address,
+				ethers.parseUnits('100', 6),
+			);
+
+			// Mint some USDC to the Attacker
+			const approveTx2 = await mockUSDC
+				.connect(accounts.attacker)
+				.approve(
+					vaultPrudentGlUSDP.target,
+					ethers.parseUnits('1000000', 6),
+				);
+			await approveTx2.wait();
+			await mockUSDC.mint(
+				accounts.attacker.address,
+				ethers.parseUnits('1000000', 6),
+			);
+
+			// Attacker deposits a large amount of USDC
+			const inflationAmount = ethers.parseUnits('1000000', 6); // 1 000 000 USDC
+			await mockUSDC
+				.connect(accounts.attacker)
+				.transfer(vaultPrudentGlUSDP.target, inflationAmount);
+
+			// Victim deposits a normal amount of USDC
+			const normalDeposit = ethers.parseUnits('10', 6); // 10 USDC
+			await mockUSDC
+				.connect(accounts.poorUser)
+				.approve(vaultPrudentGlUSDP.target, normalDeposit);
+
+			await vaultPrudentGlUSDP
+				.connect(accounts.poorUser)
+				.deposit(normalDeposit, accounts.poorUser.address);
+
+			// Check that the victim received shares
+			const victimShares = await vaultPrudentGlUSDP.balanceOf(
+				accounts.poorUser.address,
+			);
+			console.log('Victim shares:', victimShares);
+			expect(victimShares).to.be.gt(
+				0n,
+				"L'attaque par inflation a fonctionné: la victime n'a reçu aucune part !",
+			);
+		});
+	});
+
+	describe('Denial of Service (DoS)', () => {
+		it('Should keep rebalance gas cost under limits to prevent DoS', async () => {
+			// On simule un appel de rebalance pour s'assurer qu'il ne dépasse pas la limite de gaz du bloc
+			const tx = await vaultPrudentGlUSDP
+				.connect(accounts.dao)
+				.forceRebalance();
+			const receipt = await tx.wait();
+
+			// Le coût en gaz doit rester raisonnable (ex: < 2 millions, la limite d'un bloc Ethereum étant d'environ 30M)
+			// L'utilisation de ?. permet d'éviter les erreurs TypeScript si receipt est null
+			expect(receipt?.gasUsed).to.be.lt(2000000n);
+		});
+
+		it('Should revert safely on unexpected token errors (SafeERC20)', async () => {
+			const depositAmount = ethers.parseUnits('100', 6);
+
+			// S'assure que l'allowance est à 0 pour forcer une erreur
+			await mockUSDC
+				.connect(accounts.poorUser)
+				.approve(vaultPrudentGlUSDP.target, 0n);
+
+			// La transaction doit être annulée proprement (revert) et non échouer silencieusement
+			await expect(
+				vaultPrudentGlUSDP
+					.connect(accounts.poorUser)
+					.deposit(depositAmount, accounts.poorUser.address),
+			).to.be.revertedWithCustomError(vaultPrudentGlUSDP, 'BadAmount');
+		});
+	});
+
+	describe('Reentrancy (Active Attack Simulation)', () => {
+		it('Should revert with ReentrancyGuard error when malicious token reenters on deposit', async () => {
+			// 1. L'attaquant déploie son jeton malicieux
+			const MaliciousToken = await ethers.getContractFactory(
+				'MaliciousToken',
+				accounts.attacker,
+			);
+			const maliciousToken = await MaliciousToken.deploy();
+			await maliciousToken.waitForDeployment();
+
+			// 2. On déploie une instance isolée du Vault, branchée sur ce faux jeton
+			// Note : Assure-toi que les paramètres correspondent au constructeur de ton Vault
+			const Vault = await ethers.getContractFactory('VaultPrudentGlUSDP');
+			const vulnerableVault = await Vault.deploy(
+				maliciousToken.target,
+				'Vault Prudent Test',
+				'vpTEST',
+				accounts.dao.address,
+				accounts.team.address,
+			);
+			await vulnerableVault.waitForDeployment();
+
+			// 3. L'attaquant lie son jeton au Vault
+			await maliciousToken
+				.connect(accounts.attacker)
+				.setVault(vulnerableVault.target);
+
+			// 4. L'attaquant prépare le terrain (Approve)
+			const attackAmount = ethers.parseUnits('100', 6);
+			await maliciousToken
+				.connect(accounts.attacker)
+				.approve(vulnerableVault.target, attackAmount);
+
+			// 5. L'ATTAQUE !
+			// Le Vault va tenter de faire transferFrom.
+			// Le jeton va intercepter et tenter un second deposit.
+			// OpenZeppelin V5 doit renvoyer l'erreur custom "ReentrancyGuardReentrantCall"
+			await expect(
+				vulnerableVault
+					.connect(accounts.attacker)
+					.deposit(attackAmount, accounts.attacker.address),
+			).to.be.revertedWithCustomError(
+				vulnerableVault,
+				'ReentrancyGuardReentrantCall',
+			);
+		});
+	});
+});

@@ -5,6 +5,7 @@ import "@openzeppelin/contracts/token/ERC20/ERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/extensions/ERC4626.sol";
+import "@openzeppelin/contracts/token/ERC20/extensions/IERC20Metadata.sol";
 import "@openzeppelin/contracts/utils/introspection/IERC165.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
 import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
@@ -421,4 +422,15 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
         target = (total * bips) / 10000;
         return target;
     }
+
+    /// @notice Returns the decimals of the asset
+    /// @return The decimals of the asset
+    /// @dev The decimals of the asset is the difference between the decimals of the asset and the decimals of the shares
+function decimals() public view virtual override returns (uint8) {
+    return IERC20Metadata(asset()).decimals();
+}
+
+// function _decimalsOffset() internal view virtual override returns (uint8) {
+//     return 3; 
+// }
 }

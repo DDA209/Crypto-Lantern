@@ -37,7 +37,7 @@ contract AaveAdapterUSDC is IAdapter, ERC165{
     /// @param _aUSDC The aUSDC token contract address
     /// @param _aavePool The Aave pool contract address
     /// @param _vault The vault contract address
-    constructor(address _usdc, address _aUSDC, address _aavePool, address _vault) {
+    constructor(address _usdc, address _aUSDC, address _aavePool, address _vault){
         usdc = IERC20(_usdc);
         aUSDC = IERC20(_aUSDC); // 0x98C23E9d8f34FEFb1B7BD6a91B7FF122F4e16F5c https://aave.com/docs/resources/addresses
         aavePool = IPool(_aavePool); // 0x87870Bca3F3fD6335C3F4ce8392D69350B4fA4E2 https://aave.com/docs/resources/addresses
@@ -45,7 +45,7 @@ contract AaveAdapterUSDC is IAdapter, ERC165{
     }
 
     /// @inheritdoc ERC165
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IAdapter) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return interfaceId == type(IAdapter).interfaceId || super.supportsInterface(interfaceId);
     }
 

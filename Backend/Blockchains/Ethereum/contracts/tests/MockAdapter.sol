@@ -22,7 +22,7 @@ contract MockAdapter is IAdapter, ERC165 {
         vault = _vault;
     }
 
-    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IAdapter) returns (bool) {
+    function supportsInterface(bytes4 interfaceId) public view virtual override(ERC165, IERC165) returns (bool) {
         return interfaceId == type(IAdapter).interfaceId || super.supportsInterface(interfaceId);
     }
 
