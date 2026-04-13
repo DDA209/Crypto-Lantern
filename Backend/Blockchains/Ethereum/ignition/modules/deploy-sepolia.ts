@@ -10,6 +10,7 @@ const DAO_ADDRESS = '0x97b3b90a0d8B7fB3194a156980c6cA2FdBBF7EAe';
 const TEAM_ADDRESS = '0x97b3b90a0d8B7fB3194a156980c6cA2FdBBF7EAe';
 
 export default buildModule('VaultPrudentGlUSDPModule', (m) => {
+	// 1. Définition des variables
 	console.log('▶️ Start deploying Sepolia...');
 
 	const feesBIPS = 500n; // 5%
@@ -24,8 +25,6 @@ export default buildModule('VaultPrudentGlUSDPModule', (m) => {
 		feesBIPS,
 		bufferBIPS,
 	]);
-	// const deployBlockNumber = m.staticCall(vault, 'blockNumber', []);
-	// console.log(`NEXT_PUBLIC_BLOCK_NUMBER_SEPOLIA=${deployBlockNumber}`);
 
 	// 3. Deploy AaveAdapter
 	// Batch #2
@@ -55,7 +54,7 @@ export default buildModule('VaultPrudentGlUSDPModule', (m) => {
 		},
 	);
 
-	// 5. Deposit and burning first USDCs to prevent
+	// 5. Deposit and burning first USDCs to prevent inflation attacks
 	const usdc = m.contractAt('IERC20', USDC_SEPOLIA);
 
 	const initialDepositAmount = 10_000_000n; // 10 USDC (avec 6 décimales)
