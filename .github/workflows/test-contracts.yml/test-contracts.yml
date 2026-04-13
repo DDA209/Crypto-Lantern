@@ -1,0 +1,33 @@
+name : Smart contracts CI
+
+on:
+    push:
+        paths:
+            - 'contracts/**/*.sol'
+            - 'test/**/*.ts'
+            - 'hardhat.config.ts'
+    pull_request:
+        paths:
+            
+jobs:
+    test:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout code
+            uses: actions/checkout@v4
+
+            - name: Setup Node.js
+                uses: actions/setup-node@v4
+                with:
+                    node-version: '20'
+                    cache: 'npm'
+
+            - name: Install dependencies
+                run: npm install
+
+            - name: Compile contracts
+                run: npx hardhat compile
+
+            - name: Run unit tests
+                run: npx hardhat test test/unit/VaultPrudentGlUSDP.test.ts
