@@ -6,19 +6,15 @@ import "@openzeppelin/contracts/utils/introspection/ERC165.sol";
 import "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import "@openzeppelin/contracts/token/ERC20/utils/SafeERC20.sol";
 
-
-/// @title MockAdapter
-/// @notice Contrat de test pour simuler un protocole externe (Aave, Compound, etc.)
 contract MockAdapter is IAdapter, ERC165 {
     using SafeERC20 for IERC20;
     
-    IERC20 public asset;
-
+    IERC20 public usdc; // L'actif sous-jacent
     address public vault;
-    uint256 public investedAssets; // USDC
+    uint256 public simulatedInvestedAmount; 
 
-    constructor(address _asset, address _vault) {
-        asset = IERC20(_asset); // aUSDC
+    constructor(address _usdc, address _vault) {
+        usdc = IERC20(_usdc);
         vault = _vault;
     }
 
@@ -26,24 +22,32 @@ contract MockAdapter is IAdapter, ERC165 {
         return interfaceId == type(IAdapter).interfaceId || super.supportsInterface(interfaceId);
     }
 
+    /// @notice Retourne la valeur actuelle (Capital + Profit simulé)
     function getInvestedAssets() external view returns (uint256) {
-        return investedAssets;
+        return simulatedInvestedAmount;
     }
 
+    /// @notice Reçoit les USDC du Vault
     function invest(uint256 amount) external {
-        investedAssets += amount;
+        // Dans votre Vault, le safeTransfer a déjà eu lieu. 
+        // L'adaptateur possède maintenant les USDC physiquement.
+        simulatedInvestedAmount += amount;
     }
 
+    /// @notice Renvoie les USDC au Vault
     function divest(uint256 amount) external {
-        require(investedAssets >= amount, "Not enough assets");
-        asset.safeTransfer(vault, amount);
-        investedAssets -= amount;
+        require(simulatedInvestedAmount >= amount, "Not enough assets");
+        simulatedInvestedAmount -= amount;
+        
+        // CRUCIAL : Il faut renvoyer les USDC au Vault !
+        usdc.safeTransfer(vault, amount);
     }
 
-    // --- Tests funcitons ---
-    
-    // Permet de simuler un profit ou une perte
-    function setMockAssets(uint256 amount) external {
-        investedAssets = amount;
+    /// @notice FONCTION DE DEBUG : Simule l'arrivée de rendement (Yield)
+    /// @param profit Le montant de profit à ajouter artificiellement
+    function simulateYield(uint256 profit) external {
+        simulatedInvestedAmount += profit;
+        // On n'a pas besoin de recevoir de vrais USDC ici, 
+        // on simule juste que la valeur a grimpé on-chain.
     }
 }

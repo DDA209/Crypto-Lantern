@@ -1,5 +1,3 @@
 {
-  "VaultPrudentGlUSDPModule#IERC20": "0x94a9D9AC8a22534E3FaCa9F4e7F2E2cf85d5E4C8",
-  "VaultPrudentGlUSDPModule#VaultPrudentGlUSDP": "0xab539bCfbCAf4d7e1A1eb3a79Dbaa6eb6E2aA37F",
-  "VaultPrudentGlUSDPModule#AaveAdapterUSDC": "0x63854C6147bc1289C4A82878a2EBD51cEddFEe39"
+  "MockAdapterModule#MockAdapter": "0x39914a706FF75B603A584e75Bd8DA6fC68330352"
 }
