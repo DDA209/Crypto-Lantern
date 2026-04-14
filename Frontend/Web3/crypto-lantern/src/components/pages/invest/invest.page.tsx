@@ -18,7 +18,7 @@ import { getProfiles } from '@/config/profiles';
 import { RiskProfile } from '@/data/interfaces/vault';
 import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient } from '@/lib/client';
-import { MovementEvent } from '@/data/types/MovementEvent';
+import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
 
 export default function Invest() {
@@ -27,7 +27,7 @@ export default function Invest() {
 	const { vaultPrudentGlUSDPAddress, usdcAddress, aaveUSDCOwner } =
 		useLantern();
 
-	const [events, setEvents] = useState<MovementEvent[]>([]);
+	const [events, setEvents] = useState<DepositWithdrawMovementEvent[]>([]);
 	const [loadingEvents, setLoadingEvents] = useState(false);
 
 	const baseProfiles = getProfiles(chainId);
@@ -103,14 +103,14 @@ export default function Invest() {
 				toBlock: 'latest',
 			});
 
-			const combined: MovementEvent[] = [
+			const combined: DepositWithdrawMovementEvent[] = [
 				...depositEvents.map((e) => ({
 					address: (e.args.sender?.toString() ?? '') as Address,
 					assetsAmount: e.args.assets ?? 0n,
 					sharesAmount: e.args.shares ?? 0n,
 					blockNumber: Number(e.blockNumber),
 					transactionHash: e.transactionHash,
-					type: 'Dépôt' as const,
+					type: 'deposit' as const,
 				})),
 				...withdrawEvents.map((e) => ({
 					address: (e.args.sender?.toString() ?? '') as Address,
@@ -118,17 +118,15 @@ export default function Invest() {
 					sharesAmount: e.args.shares ?? 0n,
 					blockNumber: Number(e.blockNumber),
 					transactionHash: e.transactionHash,
-					type: 'Retrait' as const,
+					type: 'withdraw' as const,
 				})),
 			];
 
-			const filteredMovements = combined.filter(
-				(event) => event.address === address,
-			);
+			// const filteredMovements = combined.filter(
+			// 	(event) => event.address === address,
+			// );
 
-			setEvents(
-				filteredMovements.sort((a, b) => b.blockNumber - a.blockNumber),
-			);
+			setEvents(combined.sort((a, b) => b.blockNumber - a.blockNumber));
 		} catch {
 			setEvents([]);
 		} finally {

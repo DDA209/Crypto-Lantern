@@ -69,5 +69,6 @@
 		"yourRealizedYield": "Votre Rendement Réalisé",
 		"annualPercentageYield": "TAEG",
 		"comingSoon": "Bientôt"
-	}
+	},
+	"movements": { "deposit": "Déposer", "withdraw": "Retirer" }
 }

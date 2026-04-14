@@ -16,25 +16,28 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { MovementEvent } from '@/data/types/MovementEvent';
-import { formatUnits } from 'viem';
+import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
+import { Address, formatUnits } from 'viem';
 // import { Button } from '@/components/ui/button';
 import {
 	// Link,
 	Loader2,
 } from 'lucide-react';
+import { t } from 'i18next';
 
 interface EventLogsCardProps {
 	title: string;
-	events: MovementEvent[];
+	events: DepositWithdrawMovementEvent[];
 	loading: boolean;
 	className?: string;
+	userAddress?: Address;
 }
 export const EventLogsCard = ({
 	title,
 	events,
 	loading,
 	className,
+	userAddress,
 }: EventLogsCardProps) => {
 	return (
 		<Card className={cn(className)}>
@@ -55,6 +58,7 @@ export const EventLogsCard = ({
 						<TableHead>Type</TableHead>
 						<TableHead>Montant</TableHead>
 						<TableHead>Transaction</TableHead>
+						<TableHead>Adresse</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -69,19 +73,34 @@ export const EventLogsCard = ({
 						</TableRow>
 					)}
 					{events.map((event, i) => (
-						<TableRow key={i}>
-							<TableCell>{event.type}</TableCell>
+						<TableRow
+							key={i}
+							// className={}
+						>
 							<TableCell>
-								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'Dépôt' ? 'USDC' : 'glUSD-P'}`}
+								{t(`movements.${event.type}`)}
+							</TableCell>
+							<TableCell>
+								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'deposit' ? 'USDC' : 'glUSD-P'}`}
 							</TableCell>
 							<TableCell>
 								<a
 									href={`https://sepolia.etherscan.io/tx/${event.transactionHash}`}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-blue-600 hover:text-blue-800 transition-colors underline'
+									className='text-blue-600 hover:text-blue-800 transition-colors underline '
 								>
 									{`${event.transactionHash.slice(0, 6)}...${event.transactionHash.slice(-4)}`}
+								</a>
+							</TableCell>
+							<TableCell>
+								<a
+									href={`https://sepolia.etherscan.io/tx/${event.address}`}
+									target='_blank'
+									rel='noopener noreferrer'
+									className='text-blue-600 hover:text-blue-800 transition-colors underline '
+								>
+									{`${event.address.slice(0, 6)}...${event.address.slice(-4)}`}
 								</a>
 							</TableCell>
 						</TableRow>

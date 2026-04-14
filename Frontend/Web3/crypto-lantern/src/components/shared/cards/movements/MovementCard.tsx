@@ -202,7 +202,7 @@ export const MovementCard = ({
 			refetch();
 			refetchAllowance();
 			setAmount('');
-			setTimeout(() => getEvents(), 30000);
+			setTimeout(() => getEvents(), 10000);
 		} catch (error) {
 			console.error(error);
 			toast.error(t('movementCard.transactionFailed'), {
@@ -223,7 +223,7 @@ export const MovementCard = ({
 				toast(t('movementCard.transactionSuccess'));
 				refetch();
 				setTimeout(() => setAmount(''), 0);
-				const timer = setTimeout(() => getEvents(), 30000);
+				const timer = setTimeout(() => getEvents(), 10000);
 				reset();
 				return () => clearTimeout(timer);
 			}

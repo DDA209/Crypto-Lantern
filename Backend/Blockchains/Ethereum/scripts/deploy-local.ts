@@ -126,7 +126,6 @@ console.log('Local values to copy to the Front-End (.env.local) :');
 console.log(
 	`NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_HARDHAT='${vault.target}'`,
 );
-console.log(`NEXT_PUBLIC_MOCK_ADAPTER_ADDRESS_HARDHAT='${mockAdapter.target}'`);
 console.log(`NEXT_PUBLIC_USDC_ADDRESS_HARDHAT='${mockUSDC.target}'`);
 console.log(`NEXT_PUBLIC_BLOCK_NUMBER_HARDHAT=${deployBlockNumber}`);
 console.log(`RPC_URL_HARDHAT='http://127.0.0.1:8545/'`);

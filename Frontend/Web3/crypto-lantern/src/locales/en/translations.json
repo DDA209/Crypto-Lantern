@@ -69,5 +69,6 @@
 		"yourRealizedYield": "Your Realized Yield",
 		"annualPercentageYield": "APY",
 		"comingSoon": "Coming Soon"
-	}
+	},
+	"movements": { "deposit": "Deposit", "withdraw": "Withdraw" }
 }
