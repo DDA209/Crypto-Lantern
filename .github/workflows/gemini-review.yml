@@ -16,45 +16,36 @@ jobs:
               with:
                   fetch-depth: 0
 
-            - name: Get PR Diff
+            - name: Get PR Diff (Filtered)
               id: diff
               run: |
-                  # On récupère le diff et on le nettoie pour le JSON
-                  git diff origin/${{ github.base_ref }} HEAD > pr_diff.txt
-                  # On échappe les caractères spéciaux pour le payload JSON
-                  echo "DIFF_CONTENT<<EOF" >> $GITHUB_ENV
-                  cat pr_diff.txt >> $GITHUB_ENV
-                  echo "EOF" >> $GITHUB_ENV
+                  # On ne prend que les fichiers de code, on exclut les PDF, les locks et les assets
+                  git diff origin/${{ github.base_ref }} HEAD \
+                    -- . ':(exclude)*-lock.json' ':(exclude)*.pdf' ':(exclude)*.svg' ':(exclude)*.png' \
+                    > pr_diff.txt
+
+                  # On vérifie la taille. Si c'est toujours trop gros (> 50k caractères), on tronque.
+                  head -c 50000 pr_diff.txt > pr_diff_trimmed.txt
 
             - name: Gemini AI Review
               id: gemini
               run: |
-                  # 1. Construction du prompt technique
-                  PROMPT="Tu es un expert en audit de Smart Contracts Solidity et en sécurité DeFi et en développement Web 2 et Web 3 sur des solutions modernes. Analyse le diff suivant de ma Pull Request. Points de vigilance : 1. Respect du pattern Checks-Effects-Interactions (CEI). 2. Sécurité des transferts (SafeERC20). 3. Optimisation du Gaz. Sois concis et technique. Voici le code : \n\n ${{ env.DIFF_CONTENT }}"
+                  # 1. Création des instructions
+                  echo "Tu es un expert en audit de Smart Contracts Solidity. Analyse ce diff de PR. Focus : Sécurité, CEI, Gas. Sois bref." > instructions.txt
 
-                  # 2. Construction du payload JSON sans passer par des variables shell
-                  # On utilise jq pour créer un JSON valide en lisant directement les fichiers
+                  # 2. Construction du JSON sécurisé (jq gère l'échappement des caractères)
                   jq -n \
                     --slurpfile inst instructions.txt \
-                    --slurpfile diff pr_diff.txt \
-                    '{contents: [{parts: [{text: ($inst[0] + "\n\n" + $diff[0])}]}]}' > payload.json
+                    --rawfile diff pr_diff_trimmed.txt \
+                    '{contents: [{parts: [{text: ($inst[0] + "\n\n" + $diff)}]}]}' > payload.json
 
-                  # 3. Appel API en envoyant le fichier JSON directement
-                  # On utilise -d @nomdufichier pour éviter la limite ARG_MAX
-                  curl "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+                  # 3. Appel API (Lecture via fichier @)
+                  curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
                     -H 'Content-Type: application/json' \
-                    -X POST \
                     -d @payload.json > response.json
 
-                  # 4. Extraction de la réponse
-                  REVIEW=$(jq -r '.candidates[0].content.parts[0].text // "Erreur: Pas de réponse de l'\''IA"' response.json)
-
-                  # On sauvegarde pour le post-commentaire
-                  {
-                    echo "REVIEW_RESULT<<EOF"
-                    echo "$REVIEW"
-                    echo "EOF"
-                  } >> $GITHUB_ENV
+                  # 4. Extraction de la review dans un FICHIER (pas une variable env)
+                  jq -r '.candidates[0].content.parts[0].text' response.json > review_result.md
 
             - name: Post Comment to PR
               uses: actions/github-script@v7
