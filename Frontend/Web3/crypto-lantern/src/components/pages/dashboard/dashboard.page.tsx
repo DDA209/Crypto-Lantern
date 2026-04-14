@@ -41,7 +41,10 @@ export default function VaultDashboard() {
 		try {
 			if (!chainId || !vaultPrudentGlUSDPAddress) return;
 
-			const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
+			const fromBlock =
+				chainId === 11155111
+					? await client(chainId).getBlockNumber()
+					: 0n;
 
 			// Récupération des logs Rebalance
 			const rebalanceLogs = await client(chainId).getLogs({

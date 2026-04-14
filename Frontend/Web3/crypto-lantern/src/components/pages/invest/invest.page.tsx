@@ -86,7 +86,11 @@ export default function Invest() {
 	const getEvents = useCallback(async () => {
 		if (!vaultPrudentGlUSDPAddress || !chainId) return;
 		setLoadingEvents(true);
-		const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
+		const fromBlock =
+			chainId === 11155111
+				? await publicClient(chainId).getBlockNumber()
+				: 0n;
+
 		try {
 			const depositEvents = await publicClient(chainId).getLogs({
 				address: vaultPrudentGlUSDPAddress,

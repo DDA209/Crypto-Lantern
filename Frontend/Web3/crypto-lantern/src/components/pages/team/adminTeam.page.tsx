@@ -54,6 +54,8 @@ export default function AdminTeam() {
 
 	const getHarvestEvents = async () => {
 		if (!chainId || !vaultPrudentGlUSDPAddress) return;
+		const fromBlock =
+			chainId === 11155111 ? await client(chainId).getBlockNumber() : 0n;
 		setLoadingHarvestEvents(true);
 
 		try {
