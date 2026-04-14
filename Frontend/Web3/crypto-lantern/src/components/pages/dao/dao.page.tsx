@@ -23,12 +23,14 @@ import {
 	ShieldCheck,
 	CheckCircle2,
 	ShieldAlert,
+	Plus,
 } from 'lucide-react';
 import { RebalanceMovementEvent } from '@/data/types/MovementEvent';
 import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
 import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';
+import { t } from 'i18next';
 
 export default function AdminDAO() {
 	const { isDao, isNewDao, vaultPrudentGlUSDPAddress } = useLantern();
@@ -98,10 +100,12 @@ export default function AdminDAO() {
 				functionName,
 				args,
 			});
-			toast.success(`Transaction envoyée : ${functionName}`);
+			toast.success(`${t('dao.txSent')} ${functionName}`);
 		} catch (error) {
 			const err = error as BaseError;
-			toast.error(`Erreur : ${err.shortMessage || err.message}`);
+			toast.error(
+				`${t('dao.errorMsg')} ${err.shortMessage || err.message}`,
+			);
 		} finally {
 			setIsExecuting(false);
 		}
@@ -112,9 +116,7 @@ export default function AdminDAO() {
 		setIsExecuting(true);
 
 		try {
-			toast.loading('Signature de la confirmation...', {
-				id: 'admin-toast',
-			});
+			toast.loading(t('dao.loadingSign'), { id: 'admin-toast' });
 
 			const hash = await writeContractAsync({
 				address: vaultPrudentGlUSDPAddress,
@@ -122,18 +124,13 @@ export default function AdminDAO() {
 				functionName: 'confirmNewDAOAddress',
 			});
 
-			toast.loading('Transfert des droits en cours...', {
-				id: 'admin-toast',
-			});
+			toast.loading(t('dao.loadingTransfer'), { id: 'admin-toast' });
 			await publicClient.waitForTransactionReceipt({ hash });
 
-			toast.success(
-				'Félicitations ! Vous êtes désormais la nouvelle Team officielle.',
-				{ id: 'admin-toast' },
-			);
+			toast.success(t('dao.successNewTeam'), { id: 'admin-toast' });
 		} catch (error) {
 			console.error(error);
-			toast.error('Échec de la confirmation.', { id: 'admin-toast' });
+			toast.error(t('dao.errorConfirm'), { id: 'admin-toast' });
 		} finally {
 			setIsExecuting(false);
 		}
@@ -149,12 +146,9 @@ export default function AdminDAO() {
 			<div className='flex flex-col items-center max-w-4xl mx-auto px-4 space-y-8 py-20 text-center'>
 				<ShieldAlert className='h-16 w-16 text-red-500/50 mb-4' />
 				<h2 className='text-2xl font-bold text-navy mb-2'>
-					Accès Restreint
+					{t('dao.accessRestricted')}
 				</h2>
-				<p className='text-navy/60'>
-					Vous n&apos;avez pas les droits d&apos;administration Team
-					pour consulter cette page.
-				</p>
+				<p className='text-navy/60'>{t('dao.noAdminRights')}</p>
 			</div>
 		);
 	}
@@ -162,8 +156,8 @@ export default function AdminDAO() {
 	return (
 		<div className='max-w-4xl mx-auto py-10 px-4 space-y-8'>
 			<h1 className='text-3xl font-bold text-navy flex items-center gap-3'>
-				<Gavel className='h-8 w-8  text-[#28B092]' /> Console de
-				Gouvernance DAO
+				<Gavel className='h-8 w-8  text-[#28B092]' />{' '}
+				{t('dao.consoleTitle')}
 			</h1>
 
 			{/* PANNEAU DE LA NOUVELLE DAO EN ATTENTE DE CONFIRMATION */}
@@ -172,17 +166,10 @@ export default function AdminDAO() {
 					<CardHeader>
 						<CardTitle className='text-amber-800 dark:text-amber-300 flex items-center gap-2'>
 							<ShieldAlert className='h-5 w-5' />
-							Action Requise : Prise de fonction
+							{t('dao.actionRequired')}
 						</CardTitle>
 						<CardDescription className='text-amber-700/80 dark:text-amber-200'>
-							L&apos;ancienne DAO vous a désigné comme successeur.
-							Vous devez confirmer pour obtenir vos droits d&apos;
-							<a
-								href='http://'
-								target='_blank'
-								rel='noopener noreferrer'
-							></a>
-							dministration.
+							{t('dao.successorMessage')}
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
@@ -196,13 +183,13 @@ export default function AdminDAO() {
 							) : (
 								<CheckCircle2 className='mr-2 h-4 w-4' />
 							)}
-							Accepter le rôle de DAO
+							{t('dao.acceptDaoRole')}
 						</Button>
 					</CardContent>
 				</Card>
 			)}
 
-			{/* 1. Force Rebalance */}
+			{/* Force Rebalance */}
 			{isDao && (
 				<>
 					<div className='grid md:grid-cols-2 gap-6'>
@@ -210,7 +197,7 @@ export default function AdminDAO() {
 							<CardHeader>
 								<CardTitle className='flex items-center gap-2'>
 									<RefreshCcw className='h-5 w-5' />{' '}
-									Reéquilibrage Forcé
+									{t('dao.forceRebalance')}
 								</CardTitle>
 								<CardDescription>
 									Retirer des fonds des stratégies vers le
@@ -233,7 +220,7 @@ export default function AdminDAO() {
 							</CardContent>
 						</Card>
 
-						{/* 2. Configuration BIPS */}
+						{/* Configuration BIPS */}
 						<Card>
 							<CardHeader>
 								<CardTitle className='flex items-center gap-2'>
@@ -260,7 +247,7 @@ export default function AdminDAO() {
 										}
 										disabled={isExecuting || !newFees}
 									>
-										Maj
+										{t('dao.update')}
 									</Button>
 								</div>
 								<div className='flex gap-2'>
@@ -281,18 +268,27 @@ export default function AdminDAO() {
 										}
 										disabled={isExecuting || !newBuffer}
 									>
-										Maj
+										{t('dao.update')}
 									</Button>
 								</div>
 							</CardContent>
 						</Card>
 
-						{/* 3. Transfert de Gouvernance */}
+						{/* Gestion des Stratégies */}
+						{/*    Définir les adaptateur de la stratégie : */}
+						{/*    - Adresse du premier adaptateur */}
+						{/*    - Poid de l'adaptateur dans la stratégie */}
+						{/*    - Delta du poid de l'adaptateur dans la stratégie */}
+						{/*    Mini-Bouton pour retirer une stratégies sauf s'il en reste qu'une */}
+						{/*    Bouton pour ajouter un adaptateur supplémentaire (n adaptateurs) */}
+						{/*    Bouton pour remplacer la stratégie (devra tou désinvestir, enregistrer la nouvelle stratégie et forcer une rebalance) */}
+
+						{/* Transfert de Gouvernance */}
 						<Card className='md:col-span-2'>
 							<CardHeader>
 								<CardTitle className='flex items-center gap-2'>
 									<ShieldCheck className='h-5 w-5' />{' '}
-									Transfert de la DAO
+									{t('dao.transferDao')}
 								</CardTitle>
 							</CardHeader>
 							<CardContent className='flex gap-4'>
@@ -312,13 +308,13 @@ export default function AdminDAO() {
 									}
 									disabled={isExecuting || !newDaoAddress}
 								>
-									Proposer cette adresse
+									{t('dao.proposeAddress')}
 								</Button>
 							</CardContent>
 						</Card>
 					</div>
 					<RebalanceEventLogsCard
-						title='Historique des Rebalances'
+						title={t('')}
 						events={rebalanceEvents}
 						loading={loadingRebalanceEvents}
 					/>

@@ -48,7 +48,7 @@ export const EventLogsCard = ({
 						<div className='p-8 text-center text-navy/40'>
 							²
 							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
-							Chargement en cours...
+							{t('eventLogs.loading')}
 						</div>
 					)}
 				</CardDescription>
@@ -56,10 +56,10 @@ export const EventLogsCard = ({
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>Type</TableHead>
-						<TableHead>Montant</TableHead>
-						<TableHead>Transaction</TableHead>
-						<TableHead>Adresse</TableHead>
+						<TableHead>{t('eventLogs.type')}</TableHead>
+						<TableHead>{t('eventLogs.amount')}</TableHead>
+						<TableHead>{t('eventLogs.transaction')}</TableHead>
+						<TableHead>{t('eventLogs.address')}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -69,7 +69,7 @@ export const EventLogsCard = ({
 								colSpan={3}
 								className='text-center py-10'
 							>
-								<p className='text-navy/40'>Aucun mouvement</p>
+								<p className='text-navy/40'>{t('eventLogs.noMovement')}</p>
 							</TableCell>
 						</TableRow>
 					)}

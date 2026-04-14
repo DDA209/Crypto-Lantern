@@ -20,6 +20,7 @@ import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient } from '@/lib/client';
 import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
+import { t } from 'i18next';
 
 export default function Invest() {
 	const { address } = useAccount();
@@ -268,7 +269,7 @@ export default function Invest() {
 			/>
 			{/* </div> */}
 			<EventLogsCard
-				title='Historique de vos mouvements'
+				title={t('invest.historyTitle')}
 				events={events}
 				loading={loadingEvents}
 				className='w-full md:col-span-2'
