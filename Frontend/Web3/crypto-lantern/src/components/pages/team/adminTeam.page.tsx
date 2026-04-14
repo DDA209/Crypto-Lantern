@@ -30,12 +30,14 @@ import {
 } from '@/data/types/MovementEvent';
 import { HarvestEventLogsCard } from '@/components/shared/cards/eventLogs/HarvestLogsCard';
 import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminTeam() {
 	const { isTeam, isNewTeam, vaultPrudentGlUSDPAddress } = useLantern();
 	const { writeContractAsync } = useWriteContract();
 	const publicClient = usePublicClient();
 	const chainId = useChainId();
+	const { t } = useTranslation();
 
 	const [newAddressInput, setNewAddressInput] = useState('');
 	const [isExecuting, setIsExecuting] = useState(false);
@@ -129,7 +131,7 @@ export default function AdminTeam() {
 		setIsExecuting(true);
 
 		try {
-			toast.loading('Signature de la transaction Harvest...', {
+			toast.loading(t('adminTeam.loadingSignHarvest'), {
 				id: 'admin-toast',
 			});
 
@@ -139,23 +141,19 @@ export default function AdminTeam() {
 				functionName: 'harvest',
 			});
 
-			toast.loading('Récolte des rendements en cours...', {
+			toast.loading(t('adminTeam.loadingHarvesting'), {
 				id: 'admin-toast',
 			});
 			await publicClient.waitForTransactionReceipt({ hash });
 
-			toast.success('Harvest exécuté avec succès !', {
-				id: 'admin-toast',
-			});
+			toast.success(t('adminTeam.successHarvest'), { id: 'admin-toast' });
 			setTimeout(() => {
 				getHarvestEvents();
 				getRebalanceEvents();
-			}, 30000);
+			}, 10000);
 		} catch (error) {
 			console.error(error);
-			toast.error("Échec de l'exécution du Harvest.", {
-				id: 'admin-toast',
-			});
+			toast.error(t('adminTeam.errorHarvest'), { id: 'admin-toast' });
 		} finally {
 			setIsExecuting(false);
 		}
@@ -165,15 +163,13 @@ export default function AdminTeam() {
 		if (!publicClient || !vaultPrudentGlUSDPAddress) return;
 
 		if (!isAddress(newAddressInput)) {
-			toast.error(
-				"L'adresse saisie n'est pas une adresse Ethereum valide.",
-			);
+			toast.error(t('adminTeam.invalidAddress'));
 			return;
 		}
 
 		setIsExecuting(true);
 		try {
-			toast.loading("Signature de la proposition d'adresse...", {
+			toast.loading(t('adminTeam.loadingSignAddress'), {
 				id: 'admin-toast',
 			});
 
@@ -184,21 +180,16 @@ export default function AdminTeam() {
 				args: [newAddressInput as Address],
 			});
 
-			toast.loading('Validation de la nouvelle adresse...', {
+			toast.loading(t('adminTeam.loadingValidating'), {
 				id: 'admin-toast',
 			});
 			await publicClient.waitForTransactionReceipt({ hash });
 
-			toast.success(
-				'Nouvelle adresse proposée. Elle doit maintenant se connecter et confirmer.',
-				{ id: 'admin-toast' },
-			);
+			toast.success(t('adminTeam.successPropose'), { id: 'admin-toast' });
 			setNewAddressInput('');
 		} catch (error) {
 			console.error(error);
-			toast.error('Échec de la proposition de la nouvelle Team.', {
-				id: 'admin-toast',
-			});
+			toast.error(t('adminTeam.errorPropose'), { id: 'admin-toast' });
 		} finally {
 			setIsExecuting(false);
 		}
@@ -209,9 +200,7 @@ export default function AdminTeam() {
 		setIsExecuting(true);
 
 		try {
-			toast.loading('Signature de la confirmation...', {
-				id: 'admin-toast',
-			});
+			toast.loading(t('dao.loadingSign'), { id: 'admin-toast' });
 
 			const hash = await writeContractAsync({
 				address: vaultPrudentGlUSDPAddress,
@@ -219,18 +208,13 @@ export default function AdminTeam() {
 				functionName: 'confirmNewTeamAddress',
 			});
 
-			toast.loading('Transfert des droits en cours...', {
-				id: 'admin-toast',
-			});
+			toast.loading(t('dao.loadingTransfer'), { id: 'admin-toast' });
 			await publicClient.waitForTransactionReceipt({ hash });
 
-			toast.success(
-				'Félicitations ! Vous êtes désormais la nouvelle Team officielle.',
-				{ id: 'admin-toast' },
-			);
+			toast.success(t('dao.successNewTeam'), { id: 'admin-toast' });
 		} catch (error) {
 			console.error(error);
-			toast.error('Échec de la confirmation.', { id: 'admin-toast' });
+			toast.error(t('dao.errorConfirm'), { id: 'admin-toast' });
 		} finally {
 			setIsExecuting(false);
 		}
@@ -247,12 +231,9 @@ export default function AdminTeam() {
 			<div className='flex flex-col items-center max-w-4xl mx-auto px-4 space-y-8 py-20 text-center'>
 				<ShieldAlert className='h-16 w-16 text-red-500/50 mb-4' />
 				<h2 className='text-2xl font-bold text-navy mb-2'>
-					Accès Restreint
+					{t('adminTeam.accessRestricted')}
 				</h2>
-				<p className='text-navy/60'>
-					Vous n&apos;avez pas les droits d&apos;administration Team
-					pour consulter cette page.
-				</p>
+				<p className='text-navy/60'>{t('adminTeam.noAdminRights')}</p>
 			</div>
 		);
 	}
@@ -261,7 +242,7 @@ export default function AdminTeam() {
 		<div className='max-w-4xl mx-auto py-10 px-4 space-y-8'>
 			<h1 className='text-3xl font-bold text-navy flex items-center gap-3'>
 				<UserCog className='h-8 w-8 text-[#28B092]' />
-				Portail d&apos;Administration Team
+				{t('adminTeam.portalTitle')}
 			</h1>
 
 			{/* PANNEAU DE LA NOUVELLE TEAM EN ATTENTE DE CONFIRMATION */}
@@ -270,18 +251,10 @@ export default function AdminTeam() {
 					<CardHeader>
 						<CardTitle className='text-amber-800 flex items-center gap-2'>
 							<ShieldAlert className='h-5 w-5' />
-							Action Requise : Prise de fonction
+							{t('adminTeam.actionRequired')}
 						</CardTitle>
 						<CardDescription className='text-amber-700/80'>
-							L&apos;ancienne Team vous a désigné comme
-							successeur. Vous devez confirmer pour obtenir vos
-							droits d&apos;
-							<a
-								href='http://'
-								target='_blank'
-								rel='noopener noreferrer'
-							></a>
-							dministration.
+							{t('adminTeam.successorMessage')}
 						</CardDescription>
 					</CardHeader>
 					<CardContent>
@@ -295,7 +268,7 @@ export default function AdminTeam() {
 							) : (
 								<CheckCircle2 className='mr-2 h-4 w-4' />
 							)}
-							Accepter le rôle de Team
+							{t('adminTeam.acceptTeamRole')}
 						</Button>
 					</CardContent>
 				</Card>
@@ -310,14 +283,12 @@ export default function AdminTeam() {
 							<CardHeader className='bg-[#28B092]/10 rounded-t-lg'>
 								<CardTitle className='text-[#28B092] flex items-center gap-2'>
 									<Wheat className='h-5 w-5' />
-									Exécuter le Harvest
+									{t('adminTeam.executeHarvest')}
 								</CardTitle>
 							</CardHeader>
 							<CardContent className='pt-6 space-y-4'>
 								<p className='text-sm text-navy/70'>
-									Récolte les rendements générés par les
-									stratégies, prélève les frais et rééquilibre
-									le tampon de liquidité (Buffer).
+									{t('adminTeam.harvestDesc')}
 								</p>
 								<Button
 									onClick={handleHarvest}
@@ -327,7 +298,7 @@ export default function AdminTeam() {
 									{isExecuting ? (
 										<Loader2 className='mr-2 h-5 w-5 animate-spin' />
 									) : null}
-									Lancer le Harvest
+									{t('adminTeam.runHarvest')}
 								</Button>
 							</CardContent>
 						</Card>
@@ -337,14 +308,12 @@ export default function AdminTeam() {
 							<CardHeader className='bg-navy/5 rounded-t-xl'>
 								<CardTitle className='text-navy flex items-center gap-2'>
 									<UserCog className='h-5 w-5' />
-									Transférer les droits Team
+									{t('adminTeam.transferRights')}
 								</CardTitle>
 							</CardHeader>
 							<CardContent className='pt-6 space-y-4'>
 								<p className='text-sm text-navy/70'>
-									Saisissez l&apos;adresse Ethereum de la
-									nouvelle Team. Ce transfert nécessite une
-									confirmation de la part du destinataire.
+									{t('adminTeam.transferDesc')}
 								</p>
 								<div className='space-y-2'>
 									<Input
@@ -372,12 +341,12 @@ export default function AdminTeam() {
 						</Card>
 					</div>
 					<HarvestEventLogsCard
-						title='Historique des Harvests'
+						title={t('')}
 						events={harvestEvents}
 						loading={loadingHarvestEvents}
 					/>
 					<RebalanceEventLogsCard
-						title='Historique des Rebalances'
+						title={t('')}
 						events={rebalanceEvents}
 						loading={loadingRebalanceEvents}
 					/>

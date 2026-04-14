@@ -22,6 +22,7 @@ import {
 	Loader2,
 } from 'lucide-react';
 import { formatUnits } from 'viem';
+import { useTranslation } from 'react-i18next';
 
 interface RebalanceEventLogsCardProps {
 	title: string;
@@ -33,6 +34,7 @@ export const RebalanceEventLogsCard = ({
 	events,
 	loading,
 }: RebalanceEventLogsCardProps) => {
+	const { t } = useTranslation();
 	return (
 		<Card>
 			<CardHeader>
@@ -41,7 +43,7 @@ export const RebalanceEventLogsCard = ({
 					{loading && (
 						<div className='p-8 text-center text-navy/40'>
 							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
-							Chargement en cours...
+							{t('eventLogs.loading')}
 						</div>
 					)}
 				</CardDescription>
@@ -49,17 +51,19 @@ export const RebalanceEventLogsCard = ({
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>Origine</TableHead>
-						<TableHead>Part du buffer</TableHead>
-						<TableHead>Part investie</TableHead>
-						<TableHead>Part réinvestie</TableHead>
+						<TableHead>{t('eventLogs.origin')}</TableHead>
+						<TableHead>{t('eventLogs.bufferShare')}</TableHead>
+						<TableHead>{t('eventLogs.investedShare')}</TableHead>
+						<TableHead>{t('eventLogs.reinvestedShare')}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
 					{events.map((event) => (
 						<TableRow key={event.transactionHash}>
 							<TableCell>
-								{event.force ? 'Manuel' : 'Harvest'}
+								{event.force
+									? t('eventLogs.manual')
+									: t('eventLogs.harvest')}
 							</TableCell>
 							<TableCell>
 								{formatUnits(event.newBuffer ?? 0n, 6)}
