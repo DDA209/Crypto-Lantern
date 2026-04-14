@@ -16,7 +16,6 @@ import usdcAbi from '@/context/USDC.json';
 import { MovementCard } from '@/components/shared/cards/movements/MovementCard';
 import { getProfiles } from '@/config/profiles';
 import { RiskProfile } from '@/data/interfaces/vault';
-import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient } from '@/lib/client';
 import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
@@ -86,7 +85,11 @@ export default function Invest() {
 	const getEvents = useCallback(async () => {
 		if (!vaultPrudentGlUSDPAddress || !chainId) return;
 		setLoadingEvents(true);
-		const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
+		const fromBlock =
+			chainId === 11155111
+				? await publicClient(chainId).getBlockNumber()
+				: 0n;
+
 		try {
 			const depositEvents = await publicClient(chainId).getLogs({
 				address: vaultPrudentGlUSDPAddress,

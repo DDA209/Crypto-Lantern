@@ -27,7 +27,6 @@ import {
 	Trash,
 } from 'lucide-react';
 import { RebalanceMovementEvent } from '@/data/types/MovementEvent';
-import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
 import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';
@@ -53,11 +52,11 @@ export default function AdminDAO() {
 
 	const [loadingRebalanceEvents, setLoadingRebalanceEvents] = useState(false);
 
-	const fromBlock = NETWORK_CONFIG[chainId]?.fromBlock || 0n;
-
 	const getRebalanceEvents = async () => {
-		if (!chainId || !vaultPrudentGlUSDPAddress) return;
 		setLoadingRebalanceEvents(true);
+		const fromBlock =
+			chainId === 11155111 ? await client(chainId).getBlockNumber() : 0n;
+		if (!chainId || !vaultPrudentGlUSDPAddress) return;
 
 		try {
 			const rebalanceLogs = await client(chainId).getLogs({
