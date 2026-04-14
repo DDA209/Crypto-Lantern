@@ -1,7 +1,7 @@
 'use client';
 
 import { useReadContracts, useChainId } from 'wagmi';
-import { formatUnits } from 'viem';
+import { Address, formatUnits } from 'viem';
 import { useLantern } from '@/context/LanternContext';
 import VaultPrudentGlUSDPABI from '@/context/VaultPrudentGlUSDP.json';
 import { Card } from '@/components/ui/card';
@@ -14,6 +14,7 @@ import {
 	Percent,
 	ArrowUpRight,
 	Shield,
+	ChessRook,
 } from 'lucide-react';
 import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
@@ -22,17 +23,21 @@ import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import DashboarCard from '@/components/ui/cards/DashboardCard';
 import { useTranslation } from 'react-i18next';
-import { t } from 'i18next';
+import { StrategyType } from '@/data/types/Strategy';
 
 export default function VaultDashboard() {
 	const { vaultPrudentGlUSDPAddress, isConnected } = useLantern();
 	const chainId = useChainId();
 	const { theme } = useTheme();
+	const { t } = useTranslation();
 
 	const [bufferStats, setBufferStats] = useState({ amount: 0, bips: 0 });
 	const [isLoadingStats, setIsLoadingStats] = useState(true);
+	const [strategies, setStrategies] = useState([['', 0n, 0n]]);
+
 	const fetchBufferStats = async () => {
 		setIsLoadingStats(true);
+		console.log('LOAD DATA');
 		try {
 			if (!chainId || !vaultPrudentGlUSDPAddress) return;
 
@@ -65,6 +70,28 @@ export default function VaultDashboard() {
 					bips: actualBips,
 				});
 			}
+
+			const strategies: StrategyType[] = [];
+			let index = 0;
+			console.log('before while');
+			while (strategies.length < 10) {
+				try {
+					const strategyResult: [Address, bigint, bigint] =
+						(await client(chainId).readContract({
+							address: vaultPrudentGlUSDPAddress,
+							abi: VaultPrudentGlUSDPABI,
+							functionName: 'strategies',
+							args: [index],
+						})) as [Address, bigint, bigint];
+
+					strategies.push(strategyResult);
+					index++;
+				} catch (error) {
+					break;
+				}
+			}
+
+			setStrategies(strategies);
 		} catch (error) {
 			console.error('Erreur stats:', error);
 		} finally {
@@ -161,6 +188,36 @@ export default function VaultDashboard() {
 		);
 	};
 
+	const renderStrategies = () => {
+		return strategies.map((strategy) => {
+			return (
+				<div
+					key={strategy[0]}
+					className='flex flex-col gap-2'
+				>
+					<div className='flex flex-col text-sm'>
+						<span className='text-muted-foreground'>
+							{t('dashboard.strategyAddress')}
+						</span>
+						<span>{`${strategy[0].toString().slice(0, 6)}...${strategy[0].toString().slice(0, 6)}`}</span>
+					</div>
+					<div className='flex justify-between text-sm'>
+						<span className='text-muted-foreground'>
+							{t('dashboard.repartition')}
+						</span>
+						<span>{strategy[1]}</span>
+					</div>
+					<div className='flex justify-between text-sm'>
+						<span className='text-muted-foreground'>
+							{t('dashboard.deltaBIPS')}
+						</span>
+						<span>{strategy[2]}</span>
+					</div>
+				</div>
+			);
+		});
+	};
+
 	return (
 		<>
 			<div className='max-w-4xl mx-auto py-10 px-4 space-y-0 grid gap-4 md:grid-cols-2 lg:grid-cols-3'>
@@ -237,6 +294,19 @@ export default function VaultDashboard() {
 					theme={theme}
 				/>
 
+				<DashboarCard
+					title={t('dashboard.currentStrategies')}
+					icon={<ChessRook className='h-4 w-4 text-red-700' />}
+					span={1}
+					content={
+						isLoadingStats ? (
+							<Skeleton />
+						) : (
+							<>{renderStrategies()}</>
+						)
+					}
+					theme={theme}
+				/>
 				<DashboarCard
 					title={t('dashboard.deploymentDate')}
 					icon={<ShieldCheck className='h-4 w-4 text-navy' />}

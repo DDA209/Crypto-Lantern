@@ -6,6 +6,7 @@ import AppTitle from '@/components/shared/AppTitle';
 import ConnectButton from '@/components/ui/buttons/ConnectButton';
 import { LanguageSwitcher } from '@/components/ui/toggles/LanguageSwitcher';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 
 const NotConnected = () => {
 	const { t } = useTranslation();

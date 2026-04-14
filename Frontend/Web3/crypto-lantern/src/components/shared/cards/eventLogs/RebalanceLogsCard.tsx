@@ -22,7 +22,7 @@ import {
 	Loader2,
 } from 'lucide-react';
 import { formatUnits } from 'viem';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 interface RebalanceEventLogsCardProps {
 	title: string;
@@ -34,6 +34,7 @@ export const RebalanceEventLogsCard = ({
 	events,
 	loading,
 }: RebalanceEventLogsCardProps) => {
+	const { t } = useTranslation();
 	return (
 		<Card>
 			<CardHeader>

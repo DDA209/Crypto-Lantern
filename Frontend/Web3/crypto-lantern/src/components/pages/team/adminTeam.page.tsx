@@ -30,13 +30,14 @@ import {
 } from '@/data/types/MovementEvent';
 import { HarvestEventLogsCard } from '@/components/shared/cards/eventLogs/HarvestLogsCard';
 import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 export default function AdminTeam() {
 	const { isTeam, isNewTeam, vaultPrudentGlUSDPAddress } = useLantern();
 	const { writeContractAsync } = useWriteContract();
 	const publicClient = usePublicClient();
 	const chainId = useChainId();
+	const { t } = useTranslation();
 
 	const [newAddressInput, setNewAddressInput] = useState('');
 	const [isExecuting, setIsExecuting] = useState(false);

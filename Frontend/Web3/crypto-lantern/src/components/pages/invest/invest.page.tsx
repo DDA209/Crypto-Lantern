@@ -20,13 +20,14 @@ import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient } from '@/lib/client';
 import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 export default function Invest() {
 	const { address } = useAccount();
 	const chainId = useChainId();
 	const { vaultPrudentGlUSDPAddress, usdcAddress, aaveUSDCOwner } =
 		useLantern();
+	const { t } = useTranslation();
 
 	const [events, setEvents] = useState<DepositWithdrawMovementEvent[]>([]);
 	const [loadingEvents, setLoadingEvents] = useState(false);

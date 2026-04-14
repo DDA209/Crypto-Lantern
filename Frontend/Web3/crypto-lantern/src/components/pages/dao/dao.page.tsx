@@ -24,13 +24,15 @@ import {
 	CheckCircle2,
 	ShieldAlert,
 	Plus,
+	Trash,
 } from 'lucide-react';
 import { RebalanceMovementEvent } from '@/data/types/MovementEvent';
 import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
 import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
+import { StrategyType } from '@/data/types/Strategy';
 
 export default function AdminDAO() {
 	const { isDao, isNewDao, vaultPrudentGlUSDPAddress } = useLantern();
@@ -38,6 +40,7 @@ export default function AdminDAO() {
 	const [isExecuting, setIsExecuting] = useState(false);
 	const publicClient = usePublicClient();
 	const chainId = useChainId();
+	const { t } = useTranslation();
 
 	// States pour les inputs
 	const [newDaoAddress, setNewDaoAddress] = useState('');
@@ -46,6 +49,7 @@ export default function AdminDAO() {
 	const [rebalanceEvents, setRebalanceEvents] = useState<
 		RebalanceMovementEvent[]
 	>([]);
+	const [newStrategies, setNewStrategies] = useState([['', 0n, 0n]]);
 
 	const [loadingRebalanceEvents, setLoadingRebalanceEvents] = useState(false);
 
@@ -87,10 +91,11 @@ export default function AdminDAO() {
 			setLoadingRebalanceEvents(false);
 		}
 	};
+
 	// Fonction générique pour les transactions
 	const handleTx = async (
 		functionName: string,
-		args: (string | number | bigint | Address)[],
+		args: (string | number | bigint | StrategyType[])[],
 	) => {
 		setIsExecuting(true);
 		try {
@@ -134,6 +139,47 @@ export default function AdminDAO() {
 		} finally {
 			setIsExecuting(false);
 		}
+	};
+
+	const addStrategyField = () => {
+		setNewStrategies([...newStrategies, ['' as Address, 0n, 0n]]);
+	};
+
+	const removeStrategyField = (index: number) => {
+		if (newStrategies.length > 1) {
+			setNewStrategies(newStrategies.filter((_, i) => i !== index));
+		}
+	};
+
+	const updateStrategyField = (
+		index: number,
+		field: 'adapter' | 'repartitionBIPS' | 'deltaBIPS',
+		value: string | number,
+	) => {
+		const updated = [...newStrategies];
+		const currentTuple = updated[index];
+
+		if (field === 'adapter') {
+			updated[index] = [
+				value as Address,
+				currentTuple[1],
+				currentTuple[2],
+			];
+		} else if (field === 'repartitionBIPS') {
+			updated[index] = [
+				currentTuple[0],
+				BigInt(value || 0),
+				currentTuple[2],
+			];
+		} else if (field === 'deltaBIPS') {
+			updated[index] = [
+				currentTuple[0],
+				currentTuple[1],
+				BigInt(value || 0),
+			];
+		}
+
+		setNewStrategies(updated);
 	};
 
 	useEffect(() => {
@@ -189,10 +235,10 @@ export default function AdminDAO() {
 				</Card>
 			)}
 
-			{/* Force Rebalance */}
 			{isDao && (
 				<>
 					<div className='grid md:grid-cols-2 gap-6'>
+						{/* Force Rebalance */}
 						<Card>
 							<CardHeader>
 								<CardTitle className='flex items-center gap-2'>
@@ -275,13 +321,146 @@ export default function AdminDAO() {
 						</Card>
 
 						{/* Gestion des Stratégies */}
-						{/*    Définir les adaptateur de la stratégie : */}
-						{/*    - Adresse du premier adaptateur */}
-						{/*    - Poid de l'adaptateur dans la stratégie */}
-						{/*    - Delta du poid de l'adaptateur dans la stratégie */}
-						{/*    Mini-Bouton pour retirer une stratégies sauf s'il en reste qu'une */}
-						{/*    Bouton pour ajouter un adaptateur supplémentaire (n adaptateurs) */}
-						{/*    Bouton pour remplacer la stratégie (devra tou désinvestir, enregistrer la nouvelle stratégie et forcer une rebalance) */}
+						<Card className='md:col-span-2'>
+							<CardHeader>
+								<CardTitle className='flex items-center gap-2'>
+									<Settings className='h-5 w-5' />{' '}
+									{t('dao.startegyManagement')}
+								</CardTitle>
+								<CardDescription>
+									{t('dao.startegyManagementSubtitle')}
+								</CardDescription>
+							</CardHeader>
+							<CardContent className='space-y-6'>
+								{newStrategies.map((strat, index) => (
+									<div
+										key={index}
+										className='flex flex-col md:flex-row gap-4 p-4 border rounded-lg bg-muted/30 relative'
+									>
+										<div className='flex-1 space-y-2'>
+											<label className='text-xs font-bold uppercase opacity-70'>
+												{t('dao.adaptorAddress')}
+											</label>
+											<Input
+												placeholder='0x...'
+												value={strat[0].toString()}
+												onChange={(e) =>
+													updateStrategyField(
+														index,
+														'adapter',
+														e.target.value,
+													)
+												}
+												className='font-mono'
+											/>
+										</div>
+										<div className='w-full md:w-32 space-y-2'>
+											<label className='text-xs font-bold uppercase opacity-70'>
+												{t('dao.adaptorWheight')}
+											</label>
+											<Input
+												type='number'
+												value={strat[1].toString()}
+												onChange={(e) =>
+													updateStrategyField(
+														index,
+														'repartitionBIPS',
+														parseInt(
+															e.target.value,
+														),
+													)
+												}
+											/>
+										</div>
+										<div className='w-full md:w-32 space-y-2'>
+											<label className='text-xs font-bold uppercase opacity-70'>
+												{t('dao.adaptordelatWeight')}
+											</label>
+											<Input
+												type='number'
+												value={strat[2].toString()}
+												onChange={(e) =>
+													updateStrategyField(
+														index,
+														'deltaBIPS',
+														parseInt(
+															e.target.value,
+														),
+													)
+												}
+											/>
+										</div>
+										{newStrategies.length > 1 && (
+											<Button
+												variant='destructive'
+												size='icon'
+												className='absolute -right-2 -top-2 rounded-full h-6 w-6'
+												onClick={() =>
+													removeStrategyField(index)
+												}
+											>
+												<span className='text-xs'>
+													<Trash className='h-4 w-4' />
+												</span>
+											</Button>
+										)}
+									</div>
+								))}
+
+								<div className='flex flex-col sm:flex-row justify-between items-center gap-4'>
+									<Button
+										variant='outline'
+										onClick={addStrategyField}
+										className='w-full sm:w-auto'
+									>
+										<Plus className='mr-2 h-4 w-4' />{' '}
+										{t('dao.addAdaptor')}
+									</Button>
+
+									<div className='flex items-center gap-4 w-full sm:w-auto'>
+										<div className='text-sm font-medium'>
+											{t('dao.total')}{' '}
+											<span
+												className={
+													newStrategies.reduce(
+														(acc, s) =>
+															acc +
+															(s[1] as bigint),
+														0n as bigint,
+													) === 10000n
+														? 'text-green-500'
+														: 'text-red-500'
+												}
+											>
+												{newStrategies.reduce(
+													(acc, s) =>
+														acc + (s[2] as bigint),
+													0n as bigint,
+												)}{' '}
+												/ 10000 BIPS
+											</span>
+										</div>
+										<Button
+											onClick={() =>
+												handleTx('defineStrategies', [
+													newStrategies as StrategyType[],
+												])
+											}
+											disabled={
+												isExecuting ||
+												newStrategies.reduce(
+													(acc, s) =>
+														acc + (s[1] as bigint),
+													0n as bigint,
+												) !== 10000n
+											}
+										>
+											{t('dao.replaceStrategie')}
+										</Button>
+									</div>
+								</div>
+							</CardContent>
+						</Card>
 
 						{/* Transfert de Gouvernance */}
 						<Card className='md:col-span-2'>

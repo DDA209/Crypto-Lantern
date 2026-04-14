@@ -23,7 +23,7 @@ import {
 	// Link,
 	Loader2,
 } from 'lucide-react';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 interface EventLogsCardProps {
 	title: string;
@@ -39,6 +39,8 @@ export const EventLogsCard = ({
 	className,
 	userAddress,
 }: EventLogsCardProps) => {
+	const { t } = useTranslation();
+
 	return (
 		<Card className={cn(className)}>
 			<CardHeader>
@@ -69,7 +71,9 @@ export const EventLogsCard = ({
 								colSpan={3}
 								className='text-center py-10'
 							>
-								<p className='text-navy/40'>{t('eventLogs.noMovement')}</p>
+								<p className='text-navy/40'>
+									{t('eventLogs.noMovement')}
+								</p>
 							</TableCell>
 						</TableRow>
 					)}

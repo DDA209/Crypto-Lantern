@@ -21,7 +21,7 @@ import {
 	// Link,
 	Loader2,
 } from 'lucide-react';
-import { t } from 'i18next';
+import { useTranslation } from 'react-i18next';
 
 interface HarvestEventLogsCardProps {
 	title: string;
@@ -33,6 +33,8 @@ export const HarvestEventLogsCard = ({
 	events,
 	loading,
 }: HarvestEventLogsCardProps) => {
+	const { t } = useTranslation();
+
 	return (
 		<Card>
 			<CardHeader>
