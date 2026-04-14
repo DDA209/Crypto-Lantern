@@ -46,6 +46,7 @@ export const EventLogsCard = ({
 				<CardDescription>
 					{loading && (
 						<div className='p-8 text-center text-navy/40'>
+							²
 							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
 							Chargement en cours...
 						</div>
@@ -75,7 +76,13 @@ export const EventLogsCard = ({
 					{events.map((event, i) => (
 						<TableRow
 							key={i}
-							// className={}
+							className={`${
+								event.type === 'deposit'
+									? `${event.address === userAddress ? 'text-[#28B092] bg-[#28B092]/20' : 'text-[#28B092]/80 bg-[#28B092]/5'}`
+									: `${event.address === userAddress ? 'text-orange-500 bg-orange-500/20' : 'text-orange-500/80 bg-orange-500/5'}`
+							} ${
+								event.address === userAddress ? 'font-bold' : ''
+							} `}
 						>
 							<TableCell>
 								{t(`movements.${event.type}`)}
@@ -88,7 +95,7 @@ export const EventLogsCard = ({
 									href={`https://sepolia.etherscan.io/tx/${event.transactionHash}`}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-blue-600 hover:text-blue-800 transition-colors underline '
+									className='text-gray-400 hover:text-white transition-colors underline '
 								>
 									{`${event.transactionHash.slice(0, 6)}...${event.transactionHash.slice(-4)}`}
 								</a>
@@ -98,7 +105,7 @@ export const EventLogsCard = ({
 									href={`https://sepolia.etherscan.io/tx/${event.address}`}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-blue-600 hover:text-blue-800 transition-colors underline '
+									className='text-gray-400 hover:text-white transition-colors underline '
 								>
 									{`${event.address.slice(0, 6)}...${event.address.slice(-4)}`}
 								</a>

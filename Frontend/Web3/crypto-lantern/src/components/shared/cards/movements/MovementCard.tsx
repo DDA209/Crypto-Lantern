@@ -286,9 +286,13 @@ export const MovementCard = ({
 					{/* Header : AppKit Button & Solde */}
 					<div className='flex flex-row items-center justify-between gap-2'>
 						{/* L'emplacement idéal pour le composant <appkit-button /> de Reown */}
-						<div className='flex flex-row space-between gap-2 text-sm text-navy/40'>
-							Solde :{' '}
-							<span className='font-medium text-navy/60'>
+						<div className='flex flex-row space-between gap-2 text-sm text-navy/40 items-center'>
+							<span className='text-lg'>Solde :</span>
+							<span
+								className={`${
+									mode === 'deposit' ? 'text-lg' : ''
+								} font-medium text-navy/60`}
+							>
 								{balance}{' '}
 								{mode === 'deposit' ? assetSymbol : shareSymbol}
 							</span>

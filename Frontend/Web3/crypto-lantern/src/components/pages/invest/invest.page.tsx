@@ -272,6 +272,7 @@ export default function Invest() {
 				events={events}
 				loading={loadingEvents}
 				className='w-full md:col-span-2'
+				userAddress={address}
 			/>
 		</div>
 	);
