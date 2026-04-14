@@ -1,0 +1,38 @@
+name: Gemini Code Reviewer
+
+on:
+    pull_request:
+        types: [opened, synchronize]
+
+jobs:
+    review:
+        runs-on: ubuntu-latest
+        permissions:
+            contents: read
+            pull-requests: write
+
+        steps:
+            - name: Checkout Code
+              uses: actions/checkout@v4
+              with:
+                  fetch-depth: 0
+
+            - name: Get PR Diff
+              id: diff
+              run: |
+                  git diff origin/${{ github.base_ref }} HEAD > pr_diff.txt
+
+            - name: Gemini Review
+              uses: google-gemini/github-action@v1 # Utilisation de l'action officielle si disponible ou script custom
+              with:
+                  api-key: ${{ secrets.GEMINI_API_KEY }}
+                  model: 'gemini-1.5-pro'
+                  prompt: |
+                      Tu es un expert en audit de Smart Contracts Solidity et en sécurité DeFi. 
+                      Analyse le diff suivant de ma Pull Request. 
+                      Points de vigilance : 
+                      1. Respect du pattern Checks-Effects-Interactions (CEI).
+                      2. Sécurité des transferts (SafeERC20).
+                      3. Optimisation du Gaz.
+                      Sois concis et technique. Voici le code :
+                  file-path: pr_diff.txt

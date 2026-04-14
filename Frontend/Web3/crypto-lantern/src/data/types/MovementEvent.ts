@@ -1,11 +1,11 @@
 import { Address } from 'viem';
 
-export type MovementEvent = {
+export type DepositWithdrawMovementEvent = {
 	address: Address;
 	assetsAmount: bigint;
 	sharesAmount: bigint;
 	blockNumber: number;
-	type: 'Dépôt' | 'Retrait';
+	type: 'deposit' | 'withdraw';
 	transactionHash: `0x${string}`;
 };
 

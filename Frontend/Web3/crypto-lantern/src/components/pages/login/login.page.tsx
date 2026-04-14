@@ -6,6 +6,7 @@ import AppTitle from '@/components/shared/AppTitle';
 import ConnectButton from '@/components/ui/buttons/ConnectButton';
 import { LanguageSwitcher } from '@/components/ui/toggles/LanguageSwitcher';
 import Link from 'next/link';
+import { useTheme } from 'next-themes';
 
 const NotConnected = () => {
 	const { t } = useTranslation();
@@ -17,7 +18,7 @@ const NotConnected = () => {
 		<div className='flex flex-1 items-center flex-row'>
 			<div
 				id='left-column'
-				className='grow h-full hidden xl:block p-4    '
+				className='w-3/7 h-full hidden md:block p-4'
 			>
 				<div
 					className='flex flex-1 h-full bg-no-repeat bg-center bg-cover rounded-lg'
@@ -29,24 +30,12 @@ const NotConnected = () => {
 						<AppTitle rounded={true} />
 					</div>
 				</div>
-				{/* <video
-					width='100%'
-					height='100%'
-					controls
-					preload='none'
-				>
-					<source
-						src='/start-1.mp4'
-						type='video/mp4'
-					/>
-					Your browser does not support the video tag.
-				</video> */}
 			</div>
 			<div
 				id='right-column'
-				className='grow m-0 p-0 h-full flex items-center justify-center flex-col'
+				className='w-4/7 m-0 p-0 h-full flex items-center justify-center flex-col'
 			>
-				<div className='w-full xl:hidden'>
+				<div className='w-full md:hidden'>
 					<AppTitle
 						fullLogo={true}
 						opacity={75}

@@ -16,26 +16,31 @@ import {
 	CardHeader,
 	CardTitle,
 } from '@/components/ui/card';
-import { MovementEvent } from '@/data/types/MovementEvent';
-import { formatUnits } from 'viem';
+import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
+import { Address, formatUnits } from 'viem';
 // import { Button } from '@/components/ui/button';
 import {
 	// Link,
 	Loader2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface EventLogsCardProps {
 	title: string;
-	events: MovementEvent[];
+	events: DepositWithdrawMovementEvent[];
 	loading: boolean;
 	className?: string;
+	userAddress?: Address;
 }
 export const EventLogsCard = ({
 	title,
 	events,
 	loading,
 	className,
+	userAddress,
 }: EventLogsCardProps) => {
+	const { t } = useTranslation();
+
 	return (
 		<Card className={cn(className)}>
 			<CardHeader>
@@ -43,8 +48,9 @@ export const EventLogsCard = ({
 				<CardDescription>
 					{loading && (
 						<div className='p-8 text-center text-navy/40'>
+							²
 							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
-							Chargement en cours...
+							{t('eventLogs.loading')}
 						</div>
 					)}
 				</CardDescription>
@@ -52,9 +58,10 @@ export const EventLogsCard = ({
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>Type</TableHead>
-						<TableHead>Montant</TableHead>
-						<TableHead>Transaction</TableHead>
+						<TableHead>{t('eventLogs.type')}</TableHead>
+						<TableHead>{t('eventLogs.amount')}</TableHead>
+						<TableHead>{t('eventLogs.transaction')}</TableHead>
+						<TableHead>{t('eventLogs.address')}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
@@ -64,24 +71,47 @@ export const EventLogsCard = ({
 								colSpan={3}
 								className='text-center py-10'
 							>
-								<p className='text-navy/40'>Aucun mouvement</p>
+								<p className='text-navy/40'>
+									{t('eventLogs.noMovement')}
+								</p>
 							</TableCell>
 						</TableRow>
 					)}
 					{events.map((event, i) => (
-						<TableRow key={i}>
-							<TableCell>{event.type}</TableCell>
+						<TableRow
+							key={i}
+							className={`${
+								event.type === 'deposit'
+									? `${event.address === userAddress ? 'text-[#28B092] bg-[#28B092]/20' : 'text-[#28B092]/80 bg-[#28B092]/5'}`
+									: `${event.address === userAddress ? 'text-orange-500 bg-orange-500/20' : 'text-orange-500/80 bg-orange-500/5'}`
+							} ${
+								event.address === userAddress ? 'font-bold' : ''
+							} `}
+						>
 							<TableCell>
-								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'Dépôt' ? 'USDC' : 'glUSD-P'}`}
+								{t(`movements.${event.type}`)}
+							</TableCell>
+							<TableCell>
+								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'deposit' ? 'USDC' : 'glUSD-P'}`}
 							</TableCell>
 							<TableCell>
 								<a
 									href={`https://sepolia.etherscan.io/tx/${event.transactionHash}`}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-blue-600 hover:text-blue-800 transition-colors underline'
+									className='text-gray-400 hover:text-white transition-colors underline '
 								>
 									{`${event.transactionHash.slice(0, 6)}...${event.transactionHash.slice(-4)}`}
+								</a>
+							</TableCell>
+							<TableCell>
+								<a
+									href={`https://sepolia.etherscan.io/tx/${event.address}`}
+									target='_blank'
+									rel='noopener noreferrer'
+									className='text-gray-400 hover:text-white transition-colors underline '
+								>
+									{`${event.address.slice(0, 6)}...${event.address.slice(-4)}`}
 								</a>
 							</TableCell>
 						</TableRow>

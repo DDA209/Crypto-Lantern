@@ -1,4 +1,4 @@
-# 🏮 DeFi Lantern (Crypto-Lantern)
+# 🏮 DeFi Lantern
 
 > **DeFi Lantern** est un protocole décentralisé d'agrégation de rendements (Yield Aggregator) pour stablecoins. Un seul dépôt USDC pour une exposition diversifiée aux meilleurs rendements de la DeFi.
 
@@ -71,4 +71,3 @@ Le projet est divisé en deux entités distinctes :
 
 ⚖️ Avertissement
 Projet à but académique et expérimental. Les smart contracts n'ont pas été audités par des professionnels.
-

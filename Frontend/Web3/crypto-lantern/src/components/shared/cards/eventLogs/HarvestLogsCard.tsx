@@ -21,6 +21,7 @@ import {
 	// Link,
 	Loader2,
 } from 'lucide-react';
+import { useTranslation } from 'react-i18next';
 
 interface HarvestEventLogsCardProps {
 	title: string;
@@ -32,6 +33,8 @@ export const HarvestEventLogsCard = ({
 	events,
 	loading,
 }: HarvestEventLogsCardProps) => {
+	const { t } = useTranslation();
+
 	return (
 		<Card>
 			<CardHeader>
@@ -40,7 +43,7 @@ export const HarvestEventLogsCard = ({
 					{loading && (
 						<div className='p-8 text-center text-navy/40'>
 							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
-							Chargement en cours...
+							{t('eventLogs.loading')}
 						</div>
 					)}
 				</CardDescription>
@@ -48,11 +51,11 @@ export const HarvestEventLogsCard = ({
 			<Table>
 				<TableHeader>
 					<TableRow>
-						<TableHead>Rendement</TableHead>
-						<TableHead>Frais</TableHead>
-						<TableHead>gl-USDP</TableHead>
-						<TableHead>Total investi</TableHead>
-						<TableHead>Transaction</TableHead>
+						<TableHead>{t('eventLogs.yield')}</TableHead>
+						<TableHead>{t('eventLogs.fees')}</TableHead>
+						<TableHead>{t('eventLogs.glUSDP')}</TableHead>
+						<TableHead>{t('eventLogs.totalInvested')}</TableHead>
+						<TableHead>{t('eventLogs.transaction')}</TableHead>
 					</TableRow>
 				</TableHeader>
 				<TableBody>
