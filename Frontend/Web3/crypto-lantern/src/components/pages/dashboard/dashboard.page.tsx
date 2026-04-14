@@ -18,7 +18,6 @@ import {
 } from 'lucide-react';
 import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
-import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import DashboarCard from '@/components/ui/cards/DashboardCard';

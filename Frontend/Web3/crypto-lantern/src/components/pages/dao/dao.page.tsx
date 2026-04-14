@@ -27,7 +27,6 @@ import {
 	Trash,
 } from 'lucide-react';
 import { RebalanceMovementEvent } from '@/data/types/MovementEvent';
-import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient as client } from '@/lib/client';
 import { parseAbiItem } from 'viem';
 import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/RebalanceLogsCard';

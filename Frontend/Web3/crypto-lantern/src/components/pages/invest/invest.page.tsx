@@ -16,7 +16,6 @@ import usdcAbi from '@/context/USDC.json';
 import { MovementCard } from '@/components/shared/cards/movements/MovementCard';
 import { getProfiles } from '@/config/profiles';
 import { RiskProfile } from '@/data/interfaces/vault';
-import { NETWORK_CONFIG } from '@/config/NetworkConfig';
 import { publicClient } from '@/lib/client';
 import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
