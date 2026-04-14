@@ -42,7 +42,7 @@ export default function VaultDashboard() {
 
 			const fromBlock =
 				chainId === 11155111
-					? await client(chainId).getBlockNumber()
+					? (await client(chainId).getBlockNumber()) - 900n
 					: 0n;
 
 			// Récupération des logs Rebalance
@@ -201,7 +201,12 @@ export default function VaultDashboard() {
 						<span className='text-muted-foreground'>
 							{t('dashboard.strategyAddress')}
 						</span>
-						<span>{`${strategy[0].toString().slice(0, 6)}...${strategy[0].toString().slice(0, 6)}`}</span>
+						<a
+							href={`https://sepolia.etherscan.io/tx/${strategy[0].toString()}`}
+							target='_blank'
+							rel='noopener noreferrer'
+							className='text-gray-400 hover:text-white transition-colors underline '
+						>{`${strategy[0].toString().slice(0, 6)}...${strategy[0].toString().slice(-4)}`}</a>
 					</div>
 					<div className='flex justify-between text-sm'>
 						<span className='text-muted-foreground'>

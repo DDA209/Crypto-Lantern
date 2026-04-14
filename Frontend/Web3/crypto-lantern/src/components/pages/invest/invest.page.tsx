@@ -87,7 +87,7 @@ export default function Invest() {
 		setLoadingEvents(true);
 		const fromBlock =
 			chainId === 11155111
-				? await publicClient(chainId).getBlockNumber()
+				? (await publicClient(chainId).getBlockNumber()) - 900n
 				: 0n;
 
 		try {
