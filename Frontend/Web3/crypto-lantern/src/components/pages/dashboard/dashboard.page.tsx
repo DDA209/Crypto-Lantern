@@ -237,18 +237,6 @@ export default function VaultDashboard() {
 				/>
 
 				<DashboarCard
-					title='Dernier Harvest'
-					icon={<Clock className='h-4 w-4 text-purple-500' />}
-					span={1}
-					content={
-						<div className='text-2xl font-bold'>
-							{formatDate(lastHarvest)}
-						</div>
-					}
-					theme={theme}
-				/>
-
-				<DashboarCard
 					title='Date de déploiement'
 					icon={<ShieldCheck className='h-4 w-4 text-navy' />}
 					span={1}

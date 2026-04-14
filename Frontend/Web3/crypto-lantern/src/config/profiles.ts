@@ -44,7 +44,7 @@ export const getProfiles = (chainId: number): RiskProfile[] => [
 	},
 	{
 		id: 'glUSD-AH',
-		name: 'AirDrop Hunter',
+		name: 'Rewards Hunter',
 		icon: '🚀',
 		expectedAPY: '--,--',
 		assetsAmount: '- ---,--',
