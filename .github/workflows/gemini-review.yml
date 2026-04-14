@@ -10,7 +10,6 @@ jobs:
         permissions:
             contents: read
             pull-requests: write
-
         steps:
             - name: Checkout Code
               uses: actions/checkout@v4
@@ -20,19 +19,45 @@ jobs:
             - name: Get PR Diff
               id: diff
               run: |
+                  # On récupère le diff et on le nettoie pour le JSON
                   git diff origin/${{ github.base_ref }} HEAD > pr_diff.txt
+                  # On échappe les caractères spéciaux pour le payload JSON
+                  echo "DIFF_CONTENT<<EOF" >> $GITHUB_ENV
+                  cat pr_diff.txt >> $GITHUB_ENV
+                  echo "EOF" >> $GITHUB_ENV
 
-            - name: Gemini Review
-              uses: google-gemini/github-action@v1 # Utilisation de l'action officielle si disponible ou script custom
+            - name: Gemini AI Review
+              id: gemini
+              run: |
+                  # Construction du prompt technique
+                  PROMPT="Tu es un expert en audit de Smart Contracts Solidity et en sécurité DeFi. Analyse le diff suivant de ma Pull Request. Points de vigilance : 1. Respect du pattern Checks-Effects-Interactions (CEI). 2. Sécurité des transferts (SafeERC20). 3. Optimisation du Gaz. Sois concis et technique. Voici le code : \n\n ${{ env.DIFF_CONTENT }}"
+
+                  # Appel direct à l'API Gemini 1.5 Pro
+                  RESPONSE=$(curl https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }} \
+                    -H 'Content-Type: application/json' \
+                    -X POST \
+                    -d "{
+                      \"contents\": [{
+                        \"parts\":[{\"text\": \"$PROMPT\"}]
+                      }]
+                    }")
+
+                  # Extraction du texte de la réponse (via jq, installé par défaut sur l'image ubuntu)
+                  REVIEW=$(echo $RESPONSE | jq -r '.candidates[0].content.parts[0].text')
+
+                  # On sauvegarde la review pour l'étape suivante
+                  echo "REVIEW_RESULT<<EOF" >> $GITHUB_ENV
+                  echo "$REVIEW" >> $GITHUB_ENV
+                  echo "EOF" >> $GITHUB_ENV
+
+            - name: Post Comment to PR
+              uses: actions/github-script@v7
               with:
-                  api-key: ${{ secrets.GEMINI_API_KEY }}
-                  model: 'gemini-1.5-pro'
-                  prompt: |
-                      Tu es un expert en audit de Smart Contracts Solidity et en sécurité DeFi. 
-                      Analyse le diff suivant de ma Pull Request. 
-                      Points de vigilance : 
-                      1. Respect du pattern Checks-Effects-Interactions (CEI).
-                      2. Sécurité des transferts (SafeERC20).
-                      3. Optimisation du Gaz.
-                      Sois concis et technique. Voici le code :
-                  file-path: pr_diff.txt
+                  github-token: ${{ secrets.GITHUB_TOKEN }}
+                  script: |
+                      github.rest.issues.createComment({
+                        issue_number: context.issue.number,
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        body: "## 🤖 Gemini Code Review\n\n" + process.env.REVIEW_RESULT
+                      })
