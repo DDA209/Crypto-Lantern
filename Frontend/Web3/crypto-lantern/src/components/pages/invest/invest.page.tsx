@@ -6,6 +6,7 @@ import {
 	useReadContract,
 	useChainId,
 	useWriteContract,
+	usePublicClient,
 } from 'wagmi';
 import { Address, formatUnits, parseAbiItem, parseUnits, type Abi } from 'viem';
 import { useLantern } from '@/context/LanternContext';
@@ -16,7 +17,7 @@ import usdcAbi from '@/context/USDC.json';
 import { MovementCard } from '@/components/shared/cards/movements/MovementCard';
 import { getProfiles } from '@/config/profiles';
 import { RiskProfile } from '@/data/interfaces/vault';
-import { publicClient } from '@/lib/client';
+import { publicClient as client } from '@/lib/client';
 import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { EventLogsCard } from '@/components/shared/cards/eventLogs/EventLogsCard';
 import { useTranslation } from 'react-i18next';
@@ -27,6 +28,8 @@ export default function Invest() {
 	const { vaultPrudentGlUSDPAddress, usdcAddress, aaveUSDCOwner } =
 		useLantern();
 	const { t } = useTranslation();
+	const publicClient = usePublicClient();
+	const { writeContractAsync } = useWriteContract();
 
 	const [events, setEvents] = useState<DepositWithdrawMovementEvent[]>([]);
 	const [loadingEvents, setLoadingEvents] = useState(false);
@@ -87,11 +90,11 @@ export default function Invest() {
 		setLoadingEvents(true);
 		const fromBlock =
 			chainId === 11155111
-				? (await publicClient(chainId).getBlockNumber()) - 900n
+				? (await client(chainId).getBlockNumber()) - 500n
 				: 0n;
 
 		try {
-			const depositEvents = await publicClient(chainId).getLogs({
+			const depositEvents = await client(chainId).getLogs({
 				address: vaultPrudentGlUSDPAddress,
 				event: parseAbiItem(
 					'event Deposit(address indexed sender, address indexed owner, uint256 assets, uint256 shares)',
@@ -99,7 +102,7 @@ export default function Invest() {
 				fromBlock,
 				toBlock: 'latest',
 			});
-			const withdrawEvents = await publicClient(chainId).getLogs({
+			const withdrawEvents = await client(chainId).getLogs({
 				address: vaultPrudentGlUSDPAddress,
 				event: parseAbiItem(
 					'event Withdraw(address indexed sender, address indexed receiver, address indexed owner, uint256 assets, uint256 shares)',
@@ -143,8 +146,6 @@ export default function Invest() {
 		getEvents();
 	}, [vaultPrudentGlUSDPAddress, chainId, getEvents]);
 
-	const { writeContract } = useWriteContract();
-
 	const { data: usdcBalanceData, refetch: refetchUsdc } = useReadContract({
 		address: usdcAddress,
 		abi: usdcAbi as Abi,
@@ -172,19 +173,24 @@ export default function Invest() {
 	});
 
 	const formattedUsdcBalance = usdcBalanceData
-		? formatUnits(usdcBalanceData as bigint, 6)
-		: '0.00';
+		? BigInt(formatUnits(usdcBalanceData as bigint, 6))
+		: 0n;
+
 	const formattedSharesBalance = sharesBalanceData
-		? formatUnits(sharesBalanceData as bigint, 6)
-		: '0.00';
+		? BigInt(formatUnits(sharesBalanceData as bigint, 6))
+		: 0n;
+
 	const formattedSharesUsdcEqivBalance =
 		sharesBalanceData && sharePrice
-			? formatUnits(
-					((sharesBalanceData as bigint) * (sharePrice as bigint)) /
-						BigInt(10 ** 6),
-					6,
+			? BigInt(
+					formatUnits(
+						((sharesBalanceData as bigint) *
+							(sharePrice as bigint)) /
+							BigInt(10 ** 6),
+						6,
+					),
 				)
-			: '0.00';
+			: 0n;
 
 	const refetchAll = useCallback(() => {
 		refetchUsdc();
@@ -192,7 +198,8 @@ export default function Invest() {
 		refetchSharePrice();
 	}, [refetchUsdc, refetchShares, refetchSharePrice]);
 
-	const mintMockUSDC = () => {
+	const mintMockUSDC = async () => {
+		if (!publicClient) return;
 		if (!address || !usdcAddress) {
 			console.error(
 				`Address ${address ? '✅' : '❌'} | Mock USDC Address ${usdcAddress ? '✅' : '❌'}`,
@@ -206,14 +213,17 @@ export default function Invest() {
 		console.log(
 			`Minting USDC to address ${address} from Mock USDC Address ${usdcAddress}`,
 		);
-		writeContract({
+		const hash = await writeContractAsync({
 			address: usdcAddress,
 			abi: MockERC20ABI as Abi,
 			functionName: 'mint',
 			args: [address, parseUnits('1000', 6)],
 		});
+		await publicClient.waitForTransactionReceipt({ hash });
+		refetchAll();
 	};
-	const mintTestUSDC = () => {
+	const mintTestUSDC = async () => {
+		if (!publicClient) return;
 		if (!address || !usdcAddress || !aaveUSDCOwner) {
 			console.error(
 				`Address ${address ? '✅' : '❌'} | Test USDC Address ${usdcAddress ? '✅' : '❌'}`,
@@ -225,12 +235,14 @@ export default function Invest() {
 			return;
 		}
 
-		writeContract({
+		const hash = await writeContractAsync({
 			address: aaveUSDCOwner,
 			abi: AAVEUSDCOwnerABI as Abi,
 			functionName: 'mint',
 			args: [usdcAddress, address, parseUnits('1000', 6)],
 		});
+		await publicClient.waitForTransactionReceipt({ hash });
+		refetchAll();
 	};
 
 	return (
