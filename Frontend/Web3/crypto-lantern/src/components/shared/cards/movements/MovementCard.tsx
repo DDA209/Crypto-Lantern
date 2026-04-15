@@ -428,7 +428,9 @@ export const MovementCard = ({
 							/>
 							<div className='absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2'>
 								<button
-									onClick={() => setAmount(Number(balance).toString())}
+									onClick={() =>
+										setAmount(Number(balance).toString())
+									}
 									disabled={!activeProfile?.isActive}
 									className='text-xs font-bold text-[#28B092] hover:text-[#2ABFAB] disabled:text-navy/30 transition-colors'
 								>

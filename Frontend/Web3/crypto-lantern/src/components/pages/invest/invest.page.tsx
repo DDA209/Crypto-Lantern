@@ -173,16 +173,16 @@ export default function Invest() {
 	});
 
 	const formattedUsdcBalance = usdcBalanceData
-		? BigInt(formatUnits(usdcBalanceData as bigint, 6))
-		: 0n;
+		? Number(formatUnits(usdcBalanceData as bigint, 6))
+		: 0;
 
 	const formattedSharesBalance = sharesBalanceData
-		? BigInt(formatUnits(sharesBalanceData as bigint, 6))
-		: 0n;
+		? Number(formatUnits(sharesBalanceData as bigint, 6))
+		: 0;
 
 	const formattedSharesUsdcEqivBalance =
 		sharesBalanceData && sharePrice
-			? BigInt(
+			? Number(
 					formatUnits(
 						((sharesBalanceData as bigint) *
 							(sharePrice as bigint)) /
@@ -190,7 +190,7 @@ export default function Invest() {
 						6,
 					),
 				)
-			: 0n;
+			: 0;
 
 	const refetchAll = useCallback(() => {
 		refetchUsdc();
