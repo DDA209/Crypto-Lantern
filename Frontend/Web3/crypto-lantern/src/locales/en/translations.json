@@ -94,7 +94,7 @@
 		"comingSoon": "Coming Soon"
 	},
 	"movements": { "deposit": "Deposit", "withdraw": "Withdraw" },
-	"invest": { "historyTitle": "Your movement history" },
+	"invest": { "historyTitle": "Movements history" ,"amount": "Amount", "riskProfil": "risk profil", "deposit": "Deposit", "withdraw": "Withdraw"},
 	"dao": {
 		"accessRestricted": "Restricted Access",
 		"noAdminRights": "You do not have Team administration rights to view this page.",

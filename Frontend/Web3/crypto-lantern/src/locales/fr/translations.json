@@ -95,7 +95,13 @@
 		"comingSoon": "Bientôt"
 	},
 	"movements": { "deposit": "Dépôt", "withdraw": "Retrait" },
-	"invest": { "historyTitle": "Historique de vos mouvements" },
+	"invest": {
+		"historyTitle": "Historiques des mouvements",
+		"amount": "Montant",
+		"riskProfil": "Profile de risque",
+		"deposit": "Déposer",
+		"withdraw": "Retirer"
+	},
 	"dao": {
 		"accessRestricted": "Accès Restreint",
 		"noAdminRights": "Vous n'avez pas les droits d'administration Team pour consulter cette page.",
@@ -170,4 +176,3 @@
 		"harvest": "Harvest"
 	}
 }
-

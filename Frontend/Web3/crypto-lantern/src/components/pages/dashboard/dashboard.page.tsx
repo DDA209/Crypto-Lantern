@@ -17,18 +17,19 @@ import {
 	ChessRook,
 } from 'lucide-react';
 import { publicClient as client } from '@/lib/client';
-import { parseAbiItem } from 'viem';
 import { useEffect, useState } from 'react';
 import { useTheme } from 'next-themes';
 import DashboarCard from '@/components/ui/cards/DashboardCard';
 import { useTranslation } from 'react-i18next';
 import { StrategyType } from '@/data/types/Strategy';
+import { useCurrency } from '@/hooks/useCurrency';
 
 export default function VaultDashboard() {
 	const { vaultPrudentGlUSDPAddress, isConnected } = useLantern();
 	const chainId = useChainId();
 	const { theme } = useTheme();
 	const { t } = useTranslation();
+	const { formatCurrency } = useCurrency();
 
 	const [bufferStats, setBufferStats] = useState({ amount: 0, bips: 0 });
 	const [isLoadingStats, setIsLoadingStats] = useState(true);
@@ -40,38 +41,26 @@ export default function VaultDashboard() {
 		try {
 			if (!chainId || !vaultPrudentGlUSDPAddress) return;
 
-			const fromBlock =
-				chainId === 11155111
-					? (await client(chainId).getBlockNumber()) - 900n
-					: 0n;
-
-			// Récupération des logs Rebalance
-			const rebalanceLogs = await client(chainId).getLogs({
-				address: vaultPrudentGlUSDPAddress,
-				event: parseAbiItem(
-					'event Rebalance(bool force, uint256 currentTotalAssets, uint256 newBuffer, uint256 divestedAmout, uint256 reinvestedAmout)',
-				),
-				fromBlock,
-				toBlock: 'latest',
-			});
-
 			const tvl = (await client(chainId).readContract({
 				address: vaultPrudentGlUSDPAddress,
 				abi: VaultPrudentGlUSDPABI,
 				functionName: 'totalAssets',
 			})) as bigint;
 
-			if (rebalanceLogs.length > 0) {
-				const lastBuffer = rebalanceLogs[rebalanceLogs.length - 1].args
-					.newBuffer as bigint;
-				const actualBips =
-					tvl > 0n ? Number((lastBuffer * 10000n) / tvl) : 0;
+			const currentBufferAmount =
+				((await client(chainId).readContract({
+					address: vaultPrudentGlUSDPAddress,
+					abi: VaultPrudentGlUSDPABI,
+					functionName: 'getBufferTotalAssets',
+				})) as bigint) ?? 0n;
 
-				setBufferStats({
-					amount: Number(lastBuffer) / 1e6, // Conversion USDC
-					bips: actualBips,
-				});
-			}
+			const actualBips =
+				tvl > 0n ? Number((currentBufferAmount * 10000n) / tvl) : 0;
+
+			setBufferStats({
+				amount: Number(currentBufferAmount) / 1e6, // Conversion USDC
+				bips: actualBips,
+			});
 
 			const strategies: StrategyType[] = [];
 			let index = 0;
@@ -250,8 +239,13 @@ export default function VaultDashboard() {
 					content={
 						<div className='text-2xl font-bold'>
 							{totalSupply.result
-								? formatUnits(totalSupply.result as bigint, 6)
-								: '0'}{' '}
+								? formatCurrency(
+										formatUnits(
+											totalSupply.result as bigint,
+											6,
+										),
+									)
+								: formatCurrency(0)}{' '}
 							glUSD-P
 						</div>
 					}
@@ -265,8 +259,13 @@ export default function VaultDashboard() {
 					content={
 						<div className='text-2xl font-bold'>
 							{pricePerShare.result
-								? formatUnits(pricePerShare.result as bigint, 6)
-								: '1.00'}{' '}
+								? formatCurrency(
+										formatUnits(
+											pricePerShare.result as bigint,
+											6,
+										),
+									)
+								: formatCurrency(1)}{' '}
 							USDC
 						</div>
 					}
@@ -283,14 +282,17 @@ export default function VaultDashboard() {
 								<Skeleton />
 							) : (
 								<div className='text-2xl font-bold'>
-									{Math.ceil(bufferStats.bips) / 100}%
+									{formatCurrency(
+										Math.ceil(bufferStats.bips) / 100,
+									)}
+									%
 								</div>
 							)}
 							{isLoadingStats ? (
 								<Skeleton />
 							) : (
 								<div className='text-2xl font-bold'>
-									{bufferStats.amount} USDC
+									{formatCurrency(bufferStats.amount)} USDC
 								</div>
 							)}
 							<p className='text-xs text-muted-foreground'>

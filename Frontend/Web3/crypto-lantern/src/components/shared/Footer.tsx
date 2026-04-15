@@ -1,6 +1,8 @@
 import { appName } from '@/config';
 import { LanguageSwitcher } from '../ui/toggles/LanguageSwitcher';
 import { NetworkDevSwitch } from '../ui/toggles/NetworkToggle';
+import { EthereumEllipseIcon, GithubIcon } from '@hugeicons/core-free-icons';
+import { HugeiconsIcon } from '@hugeicons/react';
 
 const Footer = () => {
 	return (
@@ -36,6 +38,32 @@ const Footer = () => {
 								Legal
 							</a>
 						</span>
+						-
+						<a
+							className='flex flex-row gap-0.5'
+							href='https://github.com/DDA209/Crypto-Lantern'
+							target='_blank'
+							rel='noopener noreferrer'
+						>
+							<HugeiconsIcon
+								icon={GithubIcon}
+								size={15}
+							/>{' '}
+							Github
+						</a>
+						-
+						<a
+							className='flex flex-row gap-0.5'
+							href='https://sepolia.etherscan.io/address/0xab539bCfbCAf4d7e1A1eb3a79Dbaa6eb6E2aA37F#code'
+							target='_blank'
+							rel='noopener noreferrer'
+						>
+							<HugeiconsIcon
+								icon={EthereumEllipseIcon}
+								size={15}
+							/>{' '}
+							Etherscan
+						</a>
 					</p>
 
 					<div className='flex items-center gap-4'>

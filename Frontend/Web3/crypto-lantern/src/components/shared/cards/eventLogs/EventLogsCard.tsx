@@ -10,12 +10,7 @@ import {
 } from '@/components/ui/table';
 import { cn } from '@/lib/utils';
 
-import {
-	Card,
-	CardDescription,
-	CardHeader,
-	CardTitle,
-} from '@/components/ui/card';
+import { Card, CardHeader, CardTitle } from '@/components/ui/card';
 import { DepositWithdrawMovementEvent } from '@/data/types/MovementEvent';
 import { Address, formatUnits } from 'viem';
 // import { Button } from '@/components/ui/button';
@@ -24,6 +19,7 @@ import {
 	Loader2,
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
+import { useCurrency } from '@/hooks/useCurrency';
 
 interface EventLogsCardProps {
 	title: string;
@@ -40,20 +36,11 @@ export const EventLogsCard = ({
 	userAddress,
 }: EventLogsCardProps) => {
 	const { t } = useTranslation();
-
+	const { formatCurrency } = useCurrency();
 	return (
 		<Card className={cn(className)}>
 			<CardHeader>
 				<CardTitle>{title}</CardTitle>
-				<CardDescription>
-					{loading && (
-						<div className='p-8 text-center text-navy/40'>
-							²
-							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
-							{t('eventLogs.loading')}
-						</div>
-					)}
-				</CardDescription>
 			</CardHeader>
 			<Table>
 				<TableHeader>
@@ -65,10 +52,16 @@ export const EventLogsCard = ({
 					</TableRow>
 				</TableHeader>
 				<TableBody>
+					{loading && (
+						<div className='p-8 text-center text-navy/40'>
+							<Loader2 className='h-4 w-4 shrink-0 animate-spin' />
+							{t('eventLogs.loading')}
+						</div>
+					)}
 					{events.length === 0 && (
 						<TableRow>
 							<TableCell
-								colSpan={3}
+								colSpan={4}
 								className='text-center py-10'
 							>
 								<p className='text-navy/40'>
@@ -92,7 +85,7 @@ export const EventLogsCard = ({
 								{t(`movements.${event.type}`)}
 							</TableCell>
 							<TableCell>
-								{`${formatUnits(event.assetsAmount, 6)} ${event.type === 'deposit' ? 'USDC' : 'glUSD-P'}`}
+								{`${formatCurrency(formatUnits(event.assetsAmount, 6))} ${event.type === 'deposit' ? 'USDC' : 'glUSD-P'}`}
 							</TableCell>
 							<TableCell>
 								<a

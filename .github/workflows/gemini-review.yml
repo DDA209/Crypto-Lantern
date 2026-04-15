@@ -35,7 +35,7 @@ jobs:
 
                   # 2. Construction du JSON sécurisé (jq gère l'échappement des caractères)
                   jq -n \
-                    --rawfile inst instructions.txt
+                    --rawfile inst instructions.txt \
                     --rawfile diff pr_diff_trimmed.txt \
                     '{contents: [{parts: [{text: ($inst + "\n\n" + $diff)}]}]}' > payload.json
 
