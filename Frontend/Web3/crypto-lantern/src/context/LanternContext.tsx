@@ -34,6 +34,8 @@ const getContractsAddress = (chainId?: number) => {
 			return {
 				vaultPrudentGlUSDPAddress: process.env
 					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA as Address,
+				vaultPrudentGlUSDPBackdoorAdminAddress: process.env
+					.NEXT_PUBLIC_VAULT_PRUDENT_GLUSDP_ADDRESS_SEPOLIA_BACKDOOR_ADMIN as Address,
 				usdcAddress: process.env
 					.NEXT_PUBLIC_USDC_ADDRESS_SEPOLIA as Address,
 				aaveUSDCOwner: process.env
