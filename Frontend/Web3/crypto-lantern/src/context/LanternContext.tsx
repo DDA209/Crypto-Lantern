@@ -16,6 +16,7 @@ const LanternContext = createContext<LanternContextType>({
 	isNewDao: false,
 	isTeam: false,
 	isNewTeam: false,
+	isBackdoorAdmin: false,
 });
 
 const getContractsAddress = (chainId?: number) => {
@@ -83,6 +84,17 @@ export const LanternProvider = ({
 		functionName: 'newTeamAddress',
 	});
 
+	let isBackdoorAdmin = false;
+
+	if (
+		userAddress === process.env.ANTOINE_ADDRESS_BACKDOOR_ADMIN ||
+		userAddress === process.env.FLORIAN_ADDRESS_BACKDOOR_ADMIN ||
+		userAddress === process.env.GERALD_ADDRESS_BACKDOOR_ADMIN ||
+		userAddress === process.env.TRISTAN_ADDRESS_BACKDOOR_ADMIN
+	) {
+		isBackdoorAdmin = true;
+	}
+
 	return (
 		<LanternContext.Provider
 			value={{
@@ -95,6 +107,7 @@ export const LanternProvider = ({
 				isNewDao: isConnected && newDaoAddress === userAddress,
 				isTeam: isConnected && teamAddress === userAddress,
 				isNewTeam: isConnected && newTeamAddress === userAddress,
+				isBackdoorAdmin: isConnected && isBackdoorAdmin,
 			}}
 		>
 			{children}

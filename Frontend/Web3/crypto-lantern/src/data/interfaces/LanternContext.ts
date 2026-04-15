@@ -10,6 +10,7 @@ interface LanternContextType {
 	isNewDao: boolean;
 	isTeam: boolean;
 	isNewTeam: boolean;
+	isBackdoorAdmin: boolean;
 }
 
 export default LanternContextType;

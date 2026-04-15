@@ -51,3 +51,5 @@ contract MockAdapter is IAdapter, ERC165 {
         // on simule juste que la valeur a grimpé on-chain.
     }
 }
+
+// 0x39914a706FF75B603A584e75Bd8DA6fC68330352

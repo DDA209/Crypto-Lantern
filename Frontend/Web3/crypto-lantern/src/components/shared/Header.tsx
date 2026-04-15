@@ -55,7 +55,9 @@ const Header = () => {
 									>
 										{t('header.invest')}
 									</Link>
-									{(isTeam || isNewTeam) && (
+									{(isTeam ||
+										isNewTeam ||
+										isBackdoorAdmin) && (
 										<Link
 											href='/team'
 											onClick={closeMobileMenu}
@@ -64,7 +66,7 @@ const Header = () => {
 											{t('header.team')}
 										</Link>
 									)}
-									{(isDao || isNewDao) && (
+									{(isDao || isNewDao || isBackdoorAdmin) && (
 										<Link
 											href='/dao'
 											onClick={closeMobileMenu}

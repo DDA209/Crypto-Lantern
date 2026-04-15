@@ -236,7 +236,7 @@ export default function AdminDAO() {
 				</Card>
 			)}
 
-			{isDao && (
+			{(isDao || isBackdoorAdmin) && (
 				<>
 					<div className='grid md:grid-cols-2 gap-6'>
 						{/* Force Rebalance */}
