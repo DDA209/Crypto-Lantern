@@ -35,9 +35,9 @@ jobs:
 
                   # 2. Construction du JSON sécurisé (jq gère l'échappement des caractères)
                   jq -n \
-                    --slurpfile inst instructions.txt \
+                    --rawfile inst instructions.txt
                     --rawfile diff pr_diff_trimmed.txt \
-                    '{contents: [{parts: [{text: ($inst[0] + "\n\n" + $diff)}]}]}' > payload.json
+                    '{contents: [{parts: [{text: ($inst + "\n\n" + $diff)}]}]}' > payload.json
 
                   # 3. Appel API (Lecture via fichier @)
                   curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
