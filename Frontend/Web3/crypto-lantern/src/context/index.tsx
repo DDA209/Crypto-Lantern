@@ -2,7 +2,7 @@
 
 import { wagmiAdapter, projectId, appName } from '@/config';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { createAppKit, ThemeMode, useAppKitTheme } from '@reown/appkit/react';
+import { createAppKit, useAppKitTheme } from '@reown/appkit/react';
 import {
 	mainnet,
 	// arbitrum,

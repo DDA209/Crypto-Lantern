@@ -4,8 +4,8 @@ import { RiskProfile } from '../vault';
 interface MovementCardProps {
 	mode: 'deposit' | 'withdraw';
 	profiles: RiskProfile[];
-	balance: string;
-	usdcBalance?: string;
+	balance: bigint;
+	usdcBalance?: bigint;
 	chainId: number;
 	globalAPY?: number;
 	userAPY?: number;

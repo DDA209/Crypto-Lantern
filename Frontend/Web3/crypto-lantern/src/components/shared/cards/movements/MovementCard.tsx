@@ -26,6 +26,7 @@ import {
 import MovementCardProps from '@/data/interfaces/props/MovementCardProps';
 import { useTranslation } from 'react-i18next';
 import { useTheme } from 'next-themes';
+import { useCurrency } from '@/hooks/useCurrency';
 
 // --- Types ---
 export interface Network {
@@ -51,18 +52,18 @@ export const MovementCard = ({
 	onRequestTestTokens,
 }: MovementCardProps) => {
 	const [amount, setAmount] = useState<string>('');
-
-	const [selectedAsset, setSelectedAsset] = useState<string>(assetSymbol);
-	const [selectedProfile, setSelectedProfile] = useState<string>(shareSymbol);
-
-	const [showApproveModal, setShowApproveModal] = useState(false);
-	const [isExecuting, setIsExecuting] = useState(false);
-
 	const { theme } = useTheme();
 	const { t } = useTranslation();
 	const { address } = useAccount();
-
 	const { data: hash, error, reset } = useWriteContract();
+	const { formatCurrency } = useCurrency();
+	const publicClient = usePublicClient();
+	const { writeContractAsync } = useWriteContract();
+
+	const [selectedAsset, setSelectedAsset] = useState<string>(assetSymbol);
+	const [selectedProfile, setSelectedProfile] = useState<string>(shareSymbol);
+	const [showApproveModal, setShowApproveModal] = useState(false);
+	const [isExecuting, setIsExecuting] = useState(false);
 
 	const {
 		isLoading: isConfirming,
@@ -120,10 +121,6 @@ export const MovementCard = ({
 	const isSubmitDisabled =
 		!amount || Number(amount) <= 0 || !activeProfile?.isActive;
 
-	const publicClient = usePublicClient();
-	// On récupère la version Async de writeContract
-	const { writeContractAsync } = useWriteContract();
-
 	// 1. Le clic sur le bouton principal "Déposer"
 	const handleInitialClick = () => {
 		if (!amount || Number(amount) <= 0 || !address || !assetAddress) return;
@@ -163,7 +160,6 @@ export const MovementCard = ({
 				await publicClient.waitForTransactionReceipt({
 					hash: hashApprove,
 				});
-				setShowApproveModal(false);
 			} else {
 				setShowApproveModal(false);
 			}
@@ -194,6 +190,7 @@ export const MovementCard = ({
 				id: 'tx-toast',
 			});
 			await publicClient.waitForTransactionReceipt({ hash: hashAction });
+			setShowApproveModal(false);
 
 			// --- SUCCÈS ---
 			toast.success(t('movementCard.transactionSuccess'), {
@@ -293,7 +290,7 @@ export const MovementCard = ({
 									mode === 'deposit' ? 'text-lg' : ''
 								} font-medium text-navy/60`}
 							>
-								{balance}{' '}
+								{formatCurrency(balance)}{' '}
 								{mode === 'deposit' ? assetSymbol : shareSymbol}
 							</span>
 						</div>
@@ -301,7 +298,7 @@ export const MovementCard = ({
 							<>
 								<ArrowBigRight className='h-5 w-5' />
 								<span className='text-lg font-medium text-navy/60'>
-									{usdcBalance} USDC
+									{formatCurrency(usdcBalance ?? 0)} USDC
 								</span>
 							</>
 						)}
@@ -317,7 +314,7 @@ export const MovementCard = ({
 									}
 									className='text-xs font-bold text-amber-700 bg-amber-50 border border-amber-200 hover:bg-amber-200 rounded-full h-5 px-1'
 								>
-									+ 1 000 USDC
+									{`+ ${formatCurrency(1000)} USDC`}
 								</Button>
 							)}
 					</div>
@@ -421,7 +418,7 @@ export const MovementCard = ({
 						<div className='relative'>
 							<Input
 								type='number'
-								placeholder='0.00'
+								placeholder={formatCurrency(0)}
 								min='0'
 								value={amount}
 								onChange={(e) => setAmount(e.target.value)}
@@ -431,7 +428,7 @@ export const MovementCard = ({
 							/>
 							<div className='absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-2'>
 								<button
-									onClick={() => setAmount(balance)}
+									onClick={() => setAmount(Number(balance).toString())}
 									disabled={!activeProfile?.isActive}
 									className='text-xs font-bold text-[#28B092] hover:text-[#2ABFAB] disabled:text-navy/30 transition-colors'
 								>
@@ -486,12 +483,17 @@ export const MovementCard = ({
 						<h3 className='text-lg font-bold text-navy mb-2'>
 							Autorisation requise
 						</h3>
-						<p className='text-sm text-navy/70 mb-6'>
-							Pour déposer vos fonds, vous devez d abord autoriser
-							le Vault à utiliser vos <b>{amount} USDC</b>. Cela
-							nécessitera <b>deux signatures</b> successives dans
-							votre portefeuille.
-						</p>
+						<div className='flex flex-col'>
+							<p className='text-sm text-navy/70 mb-6'>
+								Pour déposer vos fonds, vous devez d abord
+								autoriser le Vault à utiliser vos{' '}
+								<b>{amount} USDC</b>.
+							</p>
+							<p className='text-sm text-navy/70 mb-6'>
+								Cela nécessitera <b>deux signatures</b>{' '}
+								successives dans votre portefeuille.
+							</p>
+						</div>
 						<div className='flex gap-3'>
 							<Button
 								variant='outline'

@@ -55,7 +55,9 @@ export default function AdminDAO() {
 	const getRebalanceEvents = async () => {
 		setLoadingRebalanceEvents(true);
 		const fromBlock =
-			chainId === 11155111 ? await client(chainId).getBlockNumber() : 0n;
+			chainId === 11155111
+				? (await client(chainId).getBlockNumber()) - 500n
+				: 0n;
 		if (!chainId || !vaultPrudentGlUSDPAddress) return;
 
 		try {
@@ -245,8 +247,7 @@ export default function AdminDAO() {
 									{t('dao.forceRebalance')}
 								</CardTitle>
 								<CardDescription>
-									Retirer des fonds des stratégies vers le
-									buffer
+									{t('dao.forceRebalanceDesc')}
 								</CardDescription>
 							</CardHeader>
 							<CardContent className='space-y-4'>
@@ -433,7 +434,7 @@ export default function AdminDAO() {
 											>
 												{newStrategies.reduce(
 													(acc, s) =>
-														acc + (s[2] as bigint),
+														acc + (s[1] as bigint),
 													0n as bigint,
 												)}{' '}
 												/ 10000 BIPS
