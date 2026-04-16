@@ -85,7 +85,22 @@ export const EventLogsCard = ({
 								{t(`movements.${event.type}`)}
 							</TableCell>
 							<TableCell>
-								{`${formatCurrency(formatUnits(event.assetsAmount, 6))} ${event.type === 'deposit' ? 'USDC' : 'glUSD-P'}`}
+								{/* {`${formatCurrency(formatUnits(event.assetsAmount, 6))} ${event.type === 'deposit' ? 'USDC' : 'glUSD-P'}`} */}
+								{`${
+									event.type === 'deposit'
+										? formatCurrency(
+												formatUnits(
+													event.assetsAmount,
+													6,
+												),
+											) + ' USDC'
+										: formatCurrency(
+												formatUnits(
+													event.sharesAmount,
+													6,
+												),
+											) + ' glUSD-P'
+								}`}
 							</TableCell>
 							<TableCell>
 								<a
