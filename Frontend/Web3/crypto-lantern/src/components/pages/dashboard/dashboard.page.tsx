@@ -194,7 +194,7 @@ export default function VaultDashboard() {
 							href={`https://sepolia.etherscan.io/address/${strategy[0].toString()}`}
 							target='_blank'
 							rel='noopener noreferrer'
-							className='text-gray-400 hover:text-white transition-colors underline '
+							className='text-blue-600 transition-colors underline '
 						>{`${strategy[0].toString().slice(0, 6)}...${strategy[0].toString().slice(-4)}`}</a>
 					</div>
 					<div className='flex justify-between text-sm'>

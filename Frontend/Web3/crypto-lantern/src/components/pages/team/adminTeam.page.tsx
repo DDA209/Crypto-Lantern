@@ -48,6 +48,7 @@ export default function AdminTeam() {
 	const [rebalanceEvents, setRebalanceEvents] = useState<
 		RebalanceMovementEvent[]
 	>([]);
+
 	const [loadingHarvestEvents, setLoadingHarvestEvents] = useState(false);
 	const [loadingRebalanceEvents, setLoadingRebalanceEvents] = useState(false);
 
@@ -101,7 +102,7 @@ export default function AdminTeam() {
 			const rebalanceLogs = await client(chainId).getLogs({
 				address: vaultPrudentGlUSDPAddress,
 				event: parseAbiItem(
-					'event Rebalance(bool force, uint256 currentTotalAssets, uint256 newBuffer, uint256 divestedAmout, uint256 reinvestedAmout)',
+					'event Rebalance(bool force, uint256 currentTotalAssets, uint256 newBuffer, uint256 investedAmout, uint256 reinvestedAmout)',
 				),
 				fromBlock,
 				toBlock: 'latest',

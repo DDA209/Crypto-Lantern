@@ -49,6 +49,7 @@ export default function AdminDAO() {
 	const [rebalanceEvents, setRebalanceEvents] = useState<
 		RebalanceMovementEvent[]
 	>([]);
+
 	const [newStrategies, setNewStrategies] = useState([['', 0n, 0n]]);
 
 	const [loadingRebalanceEvents, setLoadingRebalanceEvents] = useState(false);
