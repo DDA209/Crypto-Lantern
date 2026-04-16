@@ -224,8 +224,13 @@ export default function VaultDashboard() {
 					content={
 						<div className='text-2xl font-bold'>
 							{totalAssets.result
-								? formatUnits(totalAssets.result as bigint, 6)
-								: '0'}{' '}
+								? formatCurrency(
+										formatUnits(
+											totalAssets.result as bigint,
+											6,
+										),
+									)
+								: formatCurrency(0)}{' '}
 							USDC
 						</div>
 					}

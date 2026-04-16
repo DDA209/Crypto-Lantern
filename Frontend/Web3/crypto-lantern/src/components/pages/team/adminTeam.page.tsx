@@ -280,7 +280,7 @@ export default function AdminTeam() {
 			)}
 
 			{/* PANNEAUX DE LA TEAM ACTUELLE */}
-			{(isTeam || isBackdoorAdmin) && (
+			{isTeam && (
 				<>
 					<div className='grid md:grid-cols-2 gap-6'>
 						{/* CARTE HARVEST */}
