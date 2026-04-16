@@ -9,7 +9,8 @@ import { useTheme } from 'next-themes';
 import { useState } from 'react';
 
 const Header = () => {
-	const { isTeam, isNewTeam, isDao, isNewDao } = useLantern();
+	const { isTeam, isNewTeam, isDao, isNewDao, isBackdoorAdmin } =
+		useLantern();
 	const { t } = useTranslation();
 	const { theme } = useTheme();
 
@@ -43,7 +44,7 @@ const Header = () => {
 										suppressHydrationWarning
 										href='/'
 										onClick={closeMobileMenu}
-										className='block text-base font-medium text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'
+										className=' block text-base font-medium text-gray-700 dark:text-gray-300 hover:text-[#28b092] dark:hover:text-[#28b092]'
 									>
 										{t('header.home')}
 									</Link>
