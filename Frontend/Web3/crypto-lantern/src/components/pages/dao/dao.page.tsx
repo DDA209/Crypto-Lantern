@@ -34,7 +34,8 @@ import { useTranslation } from 'react-i18next';
 import { StrategyType } from '@/data/types/Strategy';
 
 export default function AdminDAO() {
-	const { isDao, isNewDao, vaultPrudentGlUSDPAddress } = useLantern();
+	const { isDao, isNewDao, isBackdoorAdmin, vaultPrudentGlUSDPAddress } =
+		useLantern();
 	const { writeContractAsync } = useWriteContract();
 	const [isExecuting, setIsExecuting] = useState(false);
 	const publicClient = usePublicClient();

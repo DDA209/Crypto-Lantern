@@ -33,7 +33,8 @@ import { RebalanceEventLogsCard } from '@/components/shared/cards/eventLogs/Reba
 import { useTranslation } from 'react-i18next';
 
 export default function AdminTeam() {
-	const { isTeam, isNewTeam, vaultPrudentGlUSDPAddress } = useLantern();
+	const { isTeam, isNewTeam, isBackdoorAdmin, vaultPrudentGlUSDPAddress } =
+		useLantern();
 	const { writeContractAsync } = useWriteContract();
 	const publicClient = usePublicClient();
 	const chainId = useChainId();

@@ -191,7 +191,7 @@ export default function VaultDashboard() {
 							{t('dashboard.strategyAddress')}
 						</span>
 						<a
-							href={`https://sepolia.etherscan.io/tx/${strategy[0].toString()}`}
+							href={`https://sepolia.etherscan.io/address/${strategy[0].toString()}`}
 							target='_blank'
 							rel='noopener noreferrer'
 							className='text-gray-400 hover:text-white transition-colors underline '
