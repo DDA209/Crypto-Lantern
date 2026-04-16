@@ -107,17 +107,17 @@ export const EventLogsCard = ({
 									href={`https://sepolia.etherscan.io/tx/${event.transactionHash}`}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-gray-400 hover:text-white transition-colors underline '
+									className='text-blue-600 transition-colors underline '
 								>
 									{`${event.transactionHash.slice(0, 6)}...${event.transactionHash.slice(-4)}`}
 								</a>
 							</TableCell>
 							<TableCell>
 								<a
-									href={`https://sepolia.etherscan.io/tx/${event.address}`}
+									href={`https://sepolia.etherscan.io/address/${event.address}`}
 									target='_blank'
 									rel='noopener noreferrer'
-									className='text-gray-400 hover:text-white transition-colors underline '
+									className='text-blue-600 transition-colors underline '
 								>
 									{`${event.address.slice(0, 6)}...${event.address.slice(-4)}`}
 								</a>

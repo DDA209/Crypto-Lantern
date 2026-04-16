@@ -486,7 +486,7 @@ export const MovementCard = ({
 							Autorisation requise
 						</h3>
 						<div className='flex flex-col'>
-							<p className='text-sm text-navy/70 mb-6'>
+							<p className='text-sm text-navy/70'>
 								Pour déposer vos fonds, vous devez d abord
 								autoriser le Vault à utiliser vos{' '}
 								<b>{amount} USDC</b>.
