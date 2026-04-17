@@ -871,17 +871,15 @@ describe('6. Yield, Fees & Harvest', () => {
 			// new repartition: 163 for buffer; 1467 for strategies
 			//                  1467 * 0.2 = 293.4; 1467 * 0.8 = 1173.6
 			await vaultPrudentGlUSDP.connect(accounts.dao).forceRebalance();
-			await mockAdapter1.setMockAssets(850n); // + 670
+			await mockAdapter1.simulateYield(670n); // + 670
 			await mockUSDC.mint(mockAdapter1.target, 670n);
-			await mockAdapter2.setMockAssets(650n); // - 70
-			await mockUSDC.burn(mockAdapter2.target, 70n);
 
 			const harvestTx = vaultPrudentGlUSDP
 				.connect(accounts.team)
 				.harvest();
 			await expect(harvestTx)
 				.to.emit(vaultPrudentGlUSDP, 'Harvest')
-				.withArgs(600n, 30n, 18n, 1600n);
+				.withArgs(670n, 33n, 19n, 1670n);
 		});
 		it('Should revert if non-DAO user tries to harvest', async () => {
 			const harvestTx = vaultPrudentGlUSDP

@@ -50,6 +50,12 @@ contract MockAdapter is IAdapter, ERC165 {
         // On n'a pas besoin de recevoir de vrais USDC ici, 
         // on simule juste que la valeur a grimpé on-chain.
     }
+
+    /// @notice FONCTION DE DEBUG : Définit directement le montant investi (Yield/Loss)
+    /// @param amount Le nouveau montant investi total
+    function setMockAssets(uint256 amount) external {
+        simulatedInvestedAmount = amount;
+    }
 }
 
 // 0x39914a706FF75B603A584e75Bd8DA6fC68330352

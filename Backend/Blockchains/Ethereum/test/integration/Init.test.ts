@@ -1,13 +1,13 @@
 import { expect } from 'chai';
 import { network } from 'hardhat';
-const { ethers } = await network.connect();
+const { ethers } = await network.connect('hardhatMainnetFork');
 
 describe("Vérification de l'environnement", function () {
 	it("Doit confirmer que l'environnement de test tourne sur le fork du Mainnet", async function () {
 		// On interroge le provider RPC local pour obtenir le numéro du bloc actuel
 		const currentBlock = await ethers.provider.getBlockNumber();
 
-		console.log(`\t📌 Bloc actuel du réseau de test : ${currentBlock}`);
+		console.log(`Bloc actuel du réseau de test : ${currentBlock}`);
 
 		// L'assertion : on vérifie que le bloc correspond à celui paramétré.
 		// S'il renvoie 0 ou un chiffre très faible, c'est que le fork a échoué.
@@ -45,9 +45,7 @@ describe('Validation du Fork Mainnet', function () {
 
 		// 5. Formater et afficher le résultat pour la lisibilité
 		const formattedBalance = ethers.formatUnits(balance, decimals);
-		console.log(
-			`\t✅ Solde de la baleine usurpée : ${formattedBalance} USDC`,
-		);
+		console.log(`Solde de la baleine usurpée : ${formattedBalance} USDC`);
 
 		// 6. L'assertion Chai : on s'assure que la baleine possède bien des fonds (> 0)
 		// Le 'n' après le 0 indique qu'il s'agit d'un BigInt, format utilisé par Ethers v6
