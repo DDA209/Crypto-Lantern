@@ -1,33 +1,41 @@
-name : Smart contracts CI
+name: Smart contracts CI
 
 on:
     push:
+        # On écoute les changements dans le backend
         paths:
-            - 'contracts/**/*.sol'
-            - 'test/**/*.ts'
-            - 'hardhat.config.ts'
+            - 'Backend/Blockchains/Ethereum/contracts/**/*.sol'
+            - 'Backend/Blockchains/Ethereum/test/**/*.ts'
+            - 'Backend/Blockchains/Ethereum/hardhat.config.ts'
     pull_request:
+        # Sur une PR, on lance les tests si ces fichiers sont touchés
         paths:
-            
+            - 'Backend/Blockchains/Ethereum/contracts/**/*.sol'
+            - 'Backend/Blockchains/Ethereum/test/**/*.ts'
+
 jobs:
     test:
         runs-on: ubuntu-latest
+        defaults:
+            run:
+                working-directory: ./Backend/Blockchains/Ethereum
 
         steps:
             - name: Checkout code
-            uses: actions/checkout@v4
+              uses: actions/checkout@v4
 
             - name: Setup Node.js
-                uses: actions/setup-node@v4
-                with:
-                    node-version: '20'
-                    cache: 'npm'
+              uses: actions/setup-node@v4
+              with:
+                  node-version: '20'
+                  cache: 'npm'
+                  cache-dependency-path: './Backend/Blockchains/Ethereum/package-lock.json'
 
             - name: Install dependencies
-                run: npm install
+              run: npm install
 
             - name: Compile contracts
-                run: npx hardhat compile
+              run: npx hardhat compile
 
             - name: Run unit tests
-                run: npx hardhat test test/unit/VaultPrudentGlUSDP.test.ts
+              run: npx hardhat test test/unit/VaultPrudentGlUSDP.test.ts
