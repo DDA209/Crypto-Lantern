@@ -26,34 +26,52 @@ Le projet illustre la maîtrise des concepts avancés du Web3 :
 - **Traçabilité On-Chain :** Émission d'événements (`Harvest`, `Rebalance`, etc.) pour permettre l'indexation et la construction de tableaux de bord financiers sur le front-end.
 
 ```mermaid
-graph TD
-    subgraph Utilisateurs
-        User((Investisseur))
-    end
+flowchart TB
+ subgraph Acteurs["Acteurs"]
+        U(["Utilisateur"])
+        D(["DAO"])
+        T(["Team"])
+  end
+ subgraph Frontend["🖥️ Application Web (Vercel / Next.js)"]
+        UI["Interface Crypto Lantern <br> Wagmi / AppKit"]
+  end
+ subgraph Blockchain["⛓️ Smart Contracts (Sepolia)"]
+        V["VaultPrudentGlUSDP <br> Standard ERC-4626"]
+        A["AaveAdapterUSDC <br> Validé via ERC-165"]
+  end
+ subgraph DeFi["🌐 Protocole DeFi"]
+        AAVE[("Pool Aave V3")]
+  end
+    V -- Délègue les fonds / Demande retrait --> A
+    U -- Dépôt (USDC) --> UI
+    U -- "Burn (glUSD-P)" --> UI
+    UI -- Mint (glUSD-P) --> U
+    UI -- Retrait (USDC) --> U
+    D -- Rebalance / Modifie : Frais, Buffer, Adapter --> UI
+    T -- Déclenche Harvest --> UI
+    UI -- Appels de fonctions & Transactions --> V
+    A -- Supply (Dépôt USDC) --> AAVE
+    AAVE -. Génère Rendement .-> A
+    V -. Désinvestissement auto si Buffer insuffisant .-> A
 
-    subgraph Gouvernance
-        Team((Team Admin))
-        DAO((DAO))
-    end
-
-    subgraph DeFi Lantern Protocol
-        Vault[VaultPrudentGlUSDP<br/>ERC4626]
-        Adapter[AaveAdapterUSDC]
-    end
-
-    subgraph Externe
-        Aave[(Aave V3 Pool)]
-    end
-
-    User -->|Dépose USDC| Vault
-    Vault -->|Mint & Transfert| Shares[glUSD-P Token]
-    Shares -.->|Reçu| User
-
-    Vault -->|Investit USDC selon BIPS| Adapter
-    Adapter -->|Fournit liquidité| Aave
-
-    Team -->|Appelle harvest & maintient le buffer| Vault
-    DAO -->|Définit Stratégies & Rééquilibrage| Vault
+     U:::Aqua
+     D:::Rose
+     T:::Peach
+     UI:::Sky
+     V:::Sky
+     A:::Sky
+     AAVE:::Ash
+    classDef Rose stroke-width:1px, stroke-dasharray:none, stroke:#FF5978, fill:#FFDFE5, color:#8E2236
+    classDef Aqua stroke-width:1px, stroke-dasharray:none, stroke:#46EDC8, fill:#DEFFF8, color:#378E7A
+    classDef Peach stroke-width:1px, stroke-dasharray:none, stroke:#FBB35A, fill:#FFEFDB, color:#8F632D
+    classDef Ash stroke-width:1px, stroke-dasharray:none, stroke:#999999, fill:#EEEEEE, color:#000000
+    classDef Sky stroke-width:1px, stroke-dasharray:none, stroke:#374D7C, fill:#E2EBFF, color:#374D7C
+    style D color:#D50000
+    style UI color:#374D7C,fill:#E2EBFF,stroke:#374D7C
+    linkStyle 1 stroke:#00C853,fill:none
+    linkStyle 2 stroke:#D50000,fill:none
+    linkStyle 3 stroke:#00C853,fill:none
+    linkStyle 4 stroke:#D50000,fill:none
 ```
 
 ## 📂 Structure du Monorepo
