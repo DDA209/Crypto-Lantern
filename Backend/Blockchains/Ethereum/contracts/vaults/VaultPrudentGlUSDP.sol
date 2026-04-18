@@ -131,7 +131,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /// @notice Returns the total amount of assets in the vault as buffer
     /// @dev The total amount of assets is the sum of the assets in the vault and the assets invested
     /// @return bufferTotalAssets sum of the assets in the vault and the assets invested
-    function getBufferTotalAssets() public view returns(uint256 bufferTotalAssets) {
+    function getBufferTotalAssets() external view returns(uint256 bufferTotalAssets) {
         bufferTotalAssets = IERC20(asset()).balanceOf(address(this));
 
         return bufferTotalAssets;
