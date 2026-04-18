@@ -12,8 +12,7 @@ import {IAdapter} from "../interfaces/IAdapter.sol";
 
 /// @title Vault Prudent glUSDP
 /// @author Didier PASCAREL (https://www.linkedin.com/in/didier-pascarel/)
-/// @notice
-/// @dev 
+/// @notice ERC4626 vault that invests in strategies
 /// @custom:studywork Final project to be presented for the defense
 contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     using SafeERC20 for IERC20;
@@ -194,7 +193,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
         if (currentTotalAssets > lastTotalAssets) {
             yield = currentTotalAssets - lastTotalAssets;
-            fees = _calculateRate_j2P(yield, feesBIPS);
+            fees = Math.mulDiv(yield, feesBIPS, 10000);
             daoSharesToMint = previewDeposit(fees);
 
             _mint(daoAddress, daoSharesToMint);
@@ -291,7 +290,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
     /// @param currentTotalAssets The current total assets in the vault
     /// @dev The rebalance function is called to rebalance the assets in the vault
     function _rebalance_X1H(uint256 currentTotalAssets, bool force) internal  {
-        uint256 targetBuffer = _calculateRate_j2P(currentTotalAssets, liquidityBufferBIPS); // 1600 * 0.1 = 160 //// 1000 * 0.1 = 100
+        uint256 targetBuffer = Math.mulDiv(currentTotalAssets, liquidityBufferBIPS, 10000); // 1600 * 0.1 = 160 //// 1000 * 0.1 = 100
         uint256 targetInvestedAmount = currentTotalAssets - targetBuffer; // 1600 - 160 = 1440 -> 1600 = (1500 invested + 100 buffered) //// 1000 - 100 = 900
         uint256 strategyLength = strategies.length; // 2 //// 2
         uint256[] memory strategiesToInvest = new uint256[](strategyLength); // [0,0] //// [0,0]
@@ -300,8 +299,8 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
 
         for (uint256 index = 0; index < strategyLength; index++) {
             uint256 currentStrategyInvestedAmount = strategies[index].adapter.getInvestedAssets(); // 850; 650 //= 1500 //// 0; 0
-            uint256 targetStrategyInvestedAmount = _calculateRate_j2P(targetInvestedAmount, strategies[index].repartitionBIPS); // 1440 * 0.2 = 288; 1440 * 0.8 = 1152 //// 900 * 0.2 = 180; 900 * 0.8 = 720
-            uint256 deltaStrategy = _calculateRate_j2P(targetInvestedAmount, strategies[index].deltaBIPS); // 1440 * 0.02 = 28.8; 1440 * 0.02 = 28.8 //// 900 * 0.02 = 18; 900 * 0.02 = 18
+            uint256 targetStrategyInvestedAmount = Math.mulDiv(targetInvestedAmount, strategies[index].repartitionBIPS, 10000); // 1440 * 0.2 = 288; 1440 * 0.8 = 1152 //// 900 * 0.2 = 180; 900 * 0.8 = 720
+            uint256 deltaStrategy = Math.mulDiv(targetInvestedAmount, strategies[index].deltaBIPS, 10000); // 1440 * 0.02 = 28.8; 1440 * 0.02 = 28.8 //// 900 * 0.02 = 18; 900 * 0.02 = 18
 
             if (currentStrategyInvestedAmount > targetStrategyInvestedAmount + deltaStrategy) { // 180 > (850 + 28.8 = 878.8) true; 720 > (650 + 28.8 = 678.8) false //// 0 > (0 + 18 = 18) false; 0 > (0 + 18 = 18) false
                 // Divest first
@@ -397,7 +396,7 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
             if (i == strategies.length - 1) { // Because of rounding issues, the last strategy must take the remaining amount
                 amountToDivest = Math.min(remainingToDivest, actualBalance);
             } else {
-                uint256 targetAmount = _calculateRate_j2P(totalAmountToDivest, strategies[i].repartitionBIPS);
+                uint256 targetAmount = Math.mulDiv(totalAmountToDivest, strategies[i].repartitionBIPS, 10000);
                 amountToDivest = Math.min(targetAmount, actualBalance);
             }
 
@@ -410,15 +409,5 @@ contract VaultPrudentGlUSDP is ERC4626, ReentrancyGuard{
             }
         }
         emit ForceDivest(amount, totalAmountToDivest, remainingToDivest);
-    }
-
-    /// @notice Calculates the target amount based on the total amount and the bips
-    /// @dev Optimized to prevent gas costs
-    /// @param total The total amount
-    /// @param bips The bips to calculate the target amount
-    /// @return target The target amount
-    function _calculateRate_j2P(uint256 total, uint16 bips) internal pure returns (uint256 target) {
-        target = (total * bips) / 10000;
-        return target;
     }
 }
