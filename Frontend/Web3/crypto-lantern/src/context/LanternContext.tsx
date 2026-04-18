@@ -89,10 +89,11 @@ export const LanternProvider = ({
 	let isBackdoorAdmin = false;
 
 	if (
-		userAddress === process.env.ANTOINE_ADDRESS_BACKDOOR_ADMIN ||
-		userAddress === process.env.FLORIAN_ADDRESS_BACKDOOR_ADMIN ||
-		userAddress === process.env.GERALD_ADDRESS_BACKDOOR_ADMIN ||
-		userAddress === process.env.TRISTAN_ADDRESS_BACKDOOR_ADMIN
+		(userAddress === process.env.ANTOINE_ADDRESS_BACKDOOR_ADMIN ||
+			userAddress === process.env.FLORIAN_ADDRESS_BACKDOOR_ADMIN ||
+			userAddress === process.env.GERALD_ADDRESS_BACKDOOR_ADMIN ||
+			userAddress === process.env.TRISTAN_ADDRESS_BACKDOOR_ADMIN) &&
+		isConnected
 	) {
 		isBackdoorAdmin = true;
 	}
@@ -109,7 +110,7 @@ export const LanternProvider = ({
 				isNewDao: isConnected && newDaoAddress === userAddress,
 				isTeam: isConnected && teamAddress === userAddress,
 				isNewTeam: isConnected && newTeamAddress === userAddress,
-				isBackdoorAdmin: isConnected && isBackdoorAdmin,
+				isBackdoorAdmin,
 			}}
 		>
 			{children}
