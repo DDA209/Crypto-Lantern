@@ -19,42 +19,59 @@ jobs:
             - name: Get PR Diff (Filtered)
               id: diff
               run: |
-                  # On ne prend que les fichiers de code, on exclut les PDF, les locks et les assets
+                  # Filtre strict des fichiers lourds inutiles
                   git diff origin/${{ github.base_ref }} HEAD \
                     -- . ':(exclude)*-lock.json' ':(exclude)*.pdf' ':(exclude)*.svg' ':(exclude)*.png' \
                     > pr_diff.txt
 
-                  # On vérifie la taille. Si c'est toujours trop gros (> 50k caractères), on tronque.
+                  # Tronque à 50k caractères pour protéger le payload
                   head -c 50000 pr_diff.txt > pr_diff_trimmed.txt
 
             - name: Gemini AI Review
               id: gemini
               run: |
-                  # 1. Création des instructions
+                  # 1. Instructions
                   echo "Tu es un expert en audit de Smart Contracts Solidity. Analyse ce diff de PR. Focus : Sécurité, CEI, Gas. Sois bref." > instructions.txt
 
-                  # 2. Construction du JSON sécurisé (jq gère l'échappement des caractères)
+                  # 2. Construction JSON
                   jq -n \
                     --rawfile inst instructions.txt \
                     --rawfile diff pr_diff_trimmed.txt \
                     '{contents: [{parts: [{text: ($inst + "\n\n" + $diff)}]}]}' > payload.json
 
-                  # 3. Appel API (Lecture via fichier @)
-                  curl -s -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
+                  # 3. Appel API avec capture du code HTTP pour le débugging
+                  HTTP_STATUS=$(curl -s -o response.json -w "%{http_code}" -X POST "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent?key=${{ secrets.GEMINI_API_KEY }}" \
                     -H 'Content-Type: application/json' \
-                    -d @payload.json > response.json
+                    -d @payload.json)
 
-                  # 4. Extraction de la review dans un FICHIER (pas une variable env)
-                  jq -r '.candidates[0].content.parts[0].text' response.json > review_result.md
+                  echo "Status HTTP de l'API Gemini : $HTTP_STATUS"
+
+                  # 4. Extraction sécurisée (si l'API échoue, jq gère l'erreur au lieu de renvoyer 'null')
+                  jq -r '.candidates[0].content.parts[0].text // "⚠️ Erreur API Gemini. Regardez les logs GitHub Actions pour voir la réponse brute."' response.json > review_result.md
 
             - name: Post Comment to PR
               uses: actions/github-script@v7
               with:
                   github-token: ${{ secrets.GITHUB_TOKEN }}
                   script: |
-                      github.rest.issues.createComment({
-                        issue_number: context.issue.number,
-                        owner: context.repo.owner,
-                        repo: context.repo.repo,
-                        body: "## 🤖 Gemini Code Review\n\n" + process.env.REVIEW_RESULT
-                      })
+                      const fs = require('fs');
+
+                      // On lit le fichier
+                      let review = "";
+                      try {
+                        review = fs.readFileSync('review_result.md', 'utf8');
+                      } catch (err) {
+                        review = "⚠️ Erreur interne : Impossible de lire le fichier de résultat.";
+                      }
+
+                      // On poste uniquement si on a du contenu valide
+                      if (review && review.trim() !== "" && review.trim() !== "null") {
+                        github.rest.issues.createComment({
+                          issue_number: context.issue.number,
+                          owner: context.repo.owner,
+                          repo: context.repo.repo,
+                          body: "## 🤖 Gemini Code Review\n\n" + review
+                        });
+                      } else {
+                        console.log("Aucune review pertinente à poster.");
+                      }
